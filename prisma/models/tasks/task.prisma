@@ -1,0 +1,36 @@
+enum TaskStatus {
+  PENDING
+  SCHEDULED
+  IN_PROGRESS
+  PAUSED
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+model Task {
+  uuid        String     @id @default(uuid())
+  userUuid    String
+  name        String
+  description String?
+  status      TaskStatus @default(PENDING)
+
+  startDate       DateTime? @db.Timestamptz(3)
+  startHasTime    Boolean   @default(false)
+  endDate         DateTime? @db.Timestamptz(3)
+  endHasTime      Boolean   @default(false)
+  reminderDate    DateTime? @db.Timestamptz(3)
+  reminderHasTime Boolean   @default(false)
+
+  parentUuid String?
+  parent     Task?   @relation("TaskSubtasks", fields: [parentUuid], references: [uuid], onDelete: Cascade)
+  subtasks   Task[]  @relation("TaskSubtasks")
+  user       User    @relation(fields: [userUuid], references: [uuid], onDelete: Restrict)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userUuid, deletedAt])
+  @@index([parentUuid])
+}

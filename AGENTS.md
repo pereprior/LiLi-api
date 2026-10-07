@@ -9,6 +9,25 @@ and home-automation interfaces.
 The primary implementation language is TypeScript. The application uses
 NestJS 12 on Node.js 24 or newer and is managed with pnpm.
 
+## Intended Use and Development Priorities
+
+- LiLi is intended for private use by its creator and, at most, a few family
+  members. Treat this as the default context for all development decisions
+  unless the user explicitly changes the project's scope.
+
+- Base features, architecture, user experience, and operational decisions on
+  concrete personal and household needs. Prioritize simplicity, reliability,
+  and ease of maintenance by the creator.
+
+- Do not justify additional complexity with hypothetical public users,
+  commercial use, mass adoption, or large-scale growth. Features such as public
+  registration, multi-tenancy, billing, or elaborate role systems require a
+  concrete need within the agreed scope.
+
+- Keep security, data integrity, and useful testing appropriate to the actual
+  deployment and household use. Private use does not make personal data or
+  reliable behavior less important.
+
 ## Collaboration and Communication
 
 - Work as the user's technical teammate. Treat the project as a shared effort,
@@ -236,6 +255,15 @@ Maintain two primary test levels:
 
 Use pnpm and the scripts defined in `package.json`. Do not substitute npm or yarn
 commands.
+
+## Database Migrations
+
+- Create migrations from the Prisma schema using `pnpm db:migrate --name <name>`
+  (`prisma migrate dev`). Do not create migration files manually, use
+  `prisma migrate diff` to create them, or edit their generated SQL by hand.
+- Use `pnpm db:migrate:deploy` to apply existing migrations outside development.
+- Do not delete or regenerate applied migration history unless the user explicitly
+  authorizes it. Check affected databases and data before any reset.
 
 ## Verification
 
