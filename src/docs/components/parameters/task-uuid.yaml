@@ -1,0 +1,7 @@
+in: path
+name: uuid
+required: true
+description: UUID de una tarea o subtarea visible del usuario de la sesión.
+schema:
+  type: string
+  format: uuid

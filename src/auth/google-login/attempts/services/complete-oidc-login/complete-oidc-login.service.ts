@@ -11,7 +11,7 @@ import type { AuthenticatedExternalIdentity } from '#src/auth/google-login/oidc/
 import type { AuthConfig } from '#src/auth/types/auth-config.type.js';
 import { AuthSecretsUtils } from '#src/auth/utils/auth-secrets/auth-secrets.utils.js';
 import { PrismaService } from '#src/database/prisma.service.js';
-import { AppLogger } from '#src/logging/app-logger.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 
 @Injectable()
 export class CompleteOidcLoginService {
@@ -27,6 +27,8 @@ export class CompleteOidcLoginService {
     callbackUrl: URL,
     browserState: string | undefined,
   ): Promise<AuthenticatedExternalIdentity> {
+    this.logger.log('Starting OIDC login completion.');
+
     const expectedCallbackUrl = new URL(this.config.google.redirectUri);
     const states = callbackUrl.searchParams.getAll('state');
     if (
@@ -36,6 +38,9 @@ export class CompleteOidcLoginService {
       !states[0] ||
       states[0] !== browserState
     ) {
+      this.logger.warn('Rejected OIDC callback.', {
+        reason: 'Invalid callback URL or browser state.',
+      });
       throw new OidcLoginException();
     }
 
@@ -50,24 +55,44 @@ export class CompleteOidcLoginService {
         },
         data: { consumedAt: now },
       });
-      if (consumed.count !== 1) throw new OidcLoginException();
+      if (consumed.count !== 1) {
+        this.logger.warn('Rejected OIDC login attempt.', {
+          reason: 'Attempt is missing, expired or already consumed.',
+        });
+        throw new OidcLoginException();
+      }
 
       attempt = await this.prisma.oidcLoginAttempt.findUniqueOrThrow({
         where: { stateHash: AuthSecretsUtils.hash(states[0]) },
       });
     } catch (error) {
       if (error instanceof OidcLoginException) throw error;
-      this.logger.error('Failed to consume OIDC login attempt.');
+      this.logger.error('Failed to consume OIDC login attempt.', undefined, {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new ServiceUnavailableException('OIDC login is unavailable.');
     }
 
     try {
-      return await this.oidcClient.exchangeCode(callbackUrl, {
+      this.logger.log('Consumed OIDC login attempt.', {
+        attemptUuid: attempt.uuid,
+      });
+      const identity = await this.oidcClient.exchangeCode(callbackUrl, {
         state: states[0],
         nonce: attempt.nonce,
         codeVerifier: attempt.codeVerifier,
       });
-    } catch {
+
+      this.logger.log('Successfully completed OIDC login.', {
+        attemptUuid: attempt.uuid,
+        emailVerified: identity.emailVerified,
+      });
+      return identity;
+    } catch (error) {
+      this.logger.warn('Failed to verify OIDC identity.', {
+        attemptUuid: attempt.uuid,
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new OidcLoginException();
     }
   }

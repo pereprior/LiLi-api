@@ -2,7 +2,7 @@
 
 LiLi is a home assistant I’m building for my own home. I want to manage my tasks and reminders on a system I control, without storing that data with a third-party service. I host it myself and am designing it so that, over time, I can interact with it through the web, a mobile app, or voice.
 
-This repository contains LiLi’s backend and API. The web interface will be developed as a separate project. This is a work in progress, not a finished product. Version 0.2 aims to support tasks and reminders. **The authentication foundation is in place today**, with Google sign-in restricted to an email allowlist and local sessions stored in PostgreSQL. There are no task or reminder endpoints yet.
+This repository contains LiLi’s backend and API. The web interface will be developed as a separate project. This is a work in progress, not a finished product. Version 0.2 aims to support tasks and reminders. **Authentication and the tasks API are implemented**, with Google sign-in restricted to an email allowlist and local sessions stored in PostgreSQL. Tasks support one level of subtasks, manual states, Madrid local dates, and deletion based on their state. Reminder dates can be stored, but scheduling notifications and sending emails are still pending.
 
 ## How it’s designed
 

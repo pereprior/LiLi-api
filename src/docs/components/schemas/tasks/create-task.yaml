@@ -1,0 +1,47 @@
+type: object
+additionalProperties: false
+description: |
+  Cuerpo de `POST /tasks`. Crea una tarea en `PENDING` para el usuario de
+  la sesión. El propietario y el estado no forman parte del cuerpo.
+
+  `parentUuid` permite crear una subtarea de una principal visible del mismo
+  usuario. Solo se admite un nivel: una subtarea no puede tener subtareas.
+  No se pueden añadir subtareas a principales completadas o canceladas.
+  La fecha de fin no puede preceder al día de inicio; si ambas fechas tienen
+  hora y son del mismo día, tampoco puede preceder a la hora de inicio.
+  Las fechas de una subtarea no tienen que estar dentro de las de su principal.
+  La creación y las comprobaciones de la principal comparten una transacción.
+
+  Las propiedades desconocidas se rechazan. No hay envío de correos implementado.
+required:
+  - name
+properties:
+  name:
+    type: string
+    minLength: 1
+    pattern: '\S'
+    description: Nombre obligatorio con algún carácter distinto de espacios. Se recortan los espacios iniciales y finales al guardar.
+    example: Comprar comida
+  description:
+    type: string
+    nullable: true
+    description: Descripción opcional. Omitirla o enviar `null` guarda ausencia de descripción; la cadena vacía se admite.
+    example: Revisar lo que queda en la despensa.
+  parentUuid:
+    type: string
+    format: uuid
+    nullable: true
+    description: UUID de la principal del mismo usuario. Omitirlo o enviar `null` crea una tarea principal.
+    example: 91879373-16a2-47ea-9baa-40e15fef2ad1
+  start:
+    $ref: ./task-date-input.yaml
+  end:
+    $ref: ./task-date-input.yaml
+  reminder:
+    $ref: ./task-date-input.yaml
+example:
+  name: Comprar comida
+  description: Revisar lo que queda en la despensa.
+  start: '2026-10-15'
+  end: '2026-10-16T18:30'
+  reminder: '2026-10-14T09:00'

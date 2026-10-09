@@ -8,6 +8,7 @@ import {
 } from '#src/auth/config/auth.config.js';
 import { getEnvironmentFilePath } from '#src/config/environment.config.js';
 import { DatabaseModule } from '#src/database/database.module.js';
+import { TasksModule } from '#src/tasks/tasks.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DatabaseModule } from '#src/database/database.module.js';
     }),
     DatabaseModule,
     AuthModule,
+    TasksModule,
   ],
 })
 export class AppModule {}

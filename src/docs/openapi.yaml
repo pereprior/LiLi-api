@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: LiLi · API
-  version: 0.2.1
+  version: 0.3.0
   description: |
     Referencia del contrato HTTP actual de LiLi, pensada para volver al proyecto
     después de un tiempo y entender sus decisiones sin empezar por el código.
@@ -12,11 +12,21 @@ info:
     cookie. Las peticiones que modifican estado también deben proceder del
     origen configurado en `APP_ORIGIN`.
 
-    En esta etapa solo está implementada la autenticación. Tareas y
-    recordatorios forman parte del objetivo de la versión 0.2.
+    Las rutas de tareas requieren una sesión local. Cada operación obtiene el
+    usuario de esa sesión y limita el acceso a sus tareas visibles; no permite
+    elegir un propietario desde el cuerpo. Las escrituras requieren `Origin`
+    igual a `APP_ORIGIN` o, si falta, un `Referer` del mismo origen.
+
+    Las tareas admiten un nivel de subtareas, estados manuales, fechas locales
+    en `Europe/Madrid` y eliminación física o lógica según su estado.
+    `reminder` almacena una fecha independiente del inicio y del fin. Todavía
+    no hay programación de avisos ni envío de correos.
+
 tags:
   - name: Autenticación
     description: Inicio de sesión con Google y sesión local de LiLi.
+  - name: Tareas
+    description: Gestión de tareas y subtareas del usuario de la sesión.
 paths:
   /auth/google:
     $ref: ./paths/auth/google.yaml
@@ -26,10 +36,34 @@ paths:
     $ref: ./paths/auth/me.yaml
   /auth/logout:
     $ref: ./paths/auth/logout.yaml
+  /tasks:
+    $ref: ./paths/tasks/tasks.yaml
+  /tasks/{uuid}:
+    $ref: ./paths/tasks/task.yaml
+  /tasks/{uuid}/status:
+    $ref: ./paths/tasks/task-status.yaml
 components:
   schemas:
     AuthMeResponse:
       $ref: ./components/schemas/auth-me-response.yaml
+    TaskResponse:
+      $ref: ./components/schemas/tasks/task.yaml
+    TaskDate:
+      $ref: ./components/schemas/tasks/task-date.yaml
+    TaskDateInput:
+      $ref: ./components/schemas/tasks/task-date-input.yaml
+    TaskStatus:
+      $ref: ./components/schemas/tasks/task-status.yaml
+    CreateTask:
+      $ref: ./components/schemas/tasks/create-task.yaml
+    UpdateTaskDetails:
+      $ref: ./components/schemas/tasks/update-task-details.yaml
+    UpdateTaskStatus:
+      $ref: ./components/schemas/tasks/update-task-status.yaml
+    DeleteResponse:
+      $ref: ./components/schemas/delete-response.yaml
+    HttpError:
+      $ref: ./components/schemas/http-error.yaml
   securitySchemes:
     sessionCookie:
       $ref: ./components/security-schemes/session-cookie.yaml

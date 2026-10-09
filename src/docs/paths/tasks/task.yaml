@@ -1,0 +1,196 @@
+get:
+  tags: [Tareas]
+  operationId: findTaskByUuid
+  summary: Consultar una tarea por UUID
+  description: |
+    Devuelve una tarea o subtarea visible del usuario de la sesión, también
+    si está completada o cancelada. No consulta ni devuelve su principal ni
+    incluye una lista de subtareas. Trata igual una tarea inexistente,
+    eliminada lógicamente o de otro usuario, sin revelar si el UUID existe.
+  security:
+    - sessionCookie: []
+  parameters:
+    - $ref: ../../components/parameters/task-uuid.yaml
+  responses:
+    '200':
+      description: Tarea visible del usuario.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/tasks/task.yaml
+    '400':
+      description: El parámetro uuid no es un UUID válido.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '404':
+      description: La tarea no existe, está eliminada lógicamente o pertenece a otro usuario.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+patch:
+  tags: [Tareas]
+  operationId: updateTaskDetails
+  summary: Editar parcialmente los detalles de una tarea
+  description: |
+    Actualiza únicamente los campos enviados. Omitir un campo conserva su
+    valor; `null` elimina la descripción o una fecha. El nombre no admite `null`
+    y se guarda sin espacios iniciales ni finales. `{}` se admite en tareas
+    editables. No permite cambiar propietario, principal o estado.
+
+    Valida las fechas resultantes, combinando cambios y valores actuales.
+    No se puede quitar el inicio de una tarea programada ni editar tareas
+    completadas o canceladas. Las comprobaciones y la escritura comparten
+    una transacción; un rechazo no deja cambios parciales.
+  security:
+    - sessionCookie: []
+  parameters:
+    - $ref: ../../components/parameters/task-uuid.yaml
+    - $ref: ../../components/parameters/origin.yaml
+    - $ref: ../../components/parameters/referer.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/tasks/update-task-details.yaml
+  responses:
+    '200':
+      description: Tarea con sus detalles actualizados.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/tasks/task.yaml
+    '400':
+      description: Cuerpo o UUID inválidos, propiedades desconocidas, fechas inválidas, intervalo invertido o inicio ausente en una tarea programada.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '403':
+      description: Faltan Origin y Referer, o el origen recibido no coincide con APP_ORIGIN.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '404':
+      description: La tarea no existe, está eliminada lógicamente o pertenece a otro usuario.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '409':
+      description: La tarea está completada o cancelada, o existe un conflicto concurrente.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+delete:
+  tags: [Tareas]
+  operationId: deleteTask
+  summary: Eliminar una tarea y sus subtareas
+  description: |
+    Elige automáticamente el tipo de eliminación según el estado actual.
+    Si está `PENDING`, borra físicamente la tarea y sus subtareas por cascada.
+    En cualquier otro estado marca la tarea y sus subtareas visibles como
+    eliminadas, con el mismo instante, manteniendo sus datos y estados.
+    Las subtareas ya archivadas conservan su fecha de eliminación anterior.
+
+    Las tareas completadas o canceladas también se pueden eliminar. Eliminar
+    una subtarea no elimina su principal. La comprobación del estado y la
+    eliminación comparten una transacción. Tras el éxito, las consultas dejan
+    de devolver los registros eliminados. No hay operación de restauración;
+    repetir la eliminación devuelve 404. Ambos tipos devuelven la misma respuesta.
+  security:
+    - sessionCookie: []
+  parameters:
+    - $ref: ../../components/parameters/task-uuid.yaml
+    - $ref: ../../components/parameters/origin.yaml
+    - $ref: ../../components/parameters/referer.yaml
+  responses:
+    '200':
+      description: Eliminación completada, física o lógica.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/delete-response.yaml
+    '400':
+      description: El parámetro uuid no es un UUID válido.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '403':
+      description: Faltan Origin y Referer, o el origen recibido no coincide con APP_ORIGIN.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '404':
+      description: La tarea no existe, ya está eliminada o pertenece a otro usuario.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '409':
+      description: Existe un conflicto concurrente; la operación no se ha confirmado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml

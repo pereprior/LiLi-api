@@ -1,0 +1,24 @@
+type: string
+enum:
+  - PENDING
+  - SCHEDULED
+  - IN_PROGRESS
+  - PAUSED
+  - BLOCKED
+  - COMPLETED
+  - CANCELLED
+description: |
+  Estado elegido manualmente. Las tareas nuevas empiezan en `PENDING`.
+  `SCHEDULED` exige una fecha de inicio. Alcanzar una fecha no cambia el estado.
+
+  El estado de la principal limita los estados de sus subtareas visibles:
+  - `PENDING`: solo `PENDING`.
+  - `SCHEDULED`: `PENDING` o `SCHEDULED`.
+  - `IN_PROGRESS`, `PAUSED` y `BLOCKED`: cualquiera de los siete estados.
+  - `COMPLETED`: `COMPLETED` o `CANCELLED`.
+  - `CANCELLED`: solo `CANCELLED`.
+
+  `COMPLETED` y `CANCELLED` son terminales: no admiten edición de detalles ni
+  cambios a otro estado, aunque sí eliminación. Pedir el estado que ya tiene
+  la tarea devuelve la entidad actual sin modificarla, incluso si es terminal.
+example: PENDING

@@ -1,0 +1,6 @@
+in: header
+name: Referer
+required: false
+description: Solo se utiliza cuando falta `Origin`; su origen debe coincidir con `APP_ORIGIN`.
+schema:
+  type: string

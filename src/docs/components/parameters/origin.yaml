@@ -1,0 +1,6 @@
+in: header
+name: Origin
+required: false
+description: Debe coincidir exactamente con `APP_ORIGIN` si está presente. Para modificar datos se exige esta cabecera o un `Referer` del mismo origen.
+schema:
+  type: string
