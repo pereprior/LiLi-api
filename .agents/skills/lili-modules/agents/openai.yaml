@@ -1,0 +1,4 @@
+interface:
+  display_name: "LiLi Modules"
+  short_description: "Módulos nuevos siguiendo la estructura de tasks"
+  default_prompt: "Usa $lili-modules para implementar un módulo de LiLi siguiendo la estructura y el flujo de tasks, con integración HTTP si el encargo la requiere."
