@@ -3,13 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { AppLogger } from '#src/logging/app-logger.js';
 import type { CreateTaskDto } from '#src/tasks/dto/create-task.dto.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
-import type { TaskDateEntity } from '#src/tasks/entities/task-date.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
-import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskDateMapper } from '#src/tasks/mappers/task-date.mapper.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
+import { TaskDateUtils } from '#src/tasks/utils/task-date.utils.js';
 
 @Injectable()
 export class CreateTaskService {
@@ -21,18 +20,23 @@ export class CreateTaskService {
   ) {}
 
   async execute(userUuid: string, dto: CreateTaskDto): Promise<TaskEntity> {
+    this.logger.log('Starting to create task.', {
+      userUuid,
+      parentUuid: dto.parentUuid ?? null,
+    });
+
     try {
       const start = TaskDateMapper.fromString(dto.start ?? null);
       const end = TaskDateMapper.fromString(dto.end ?? null);
       const reminder = TaskDateMapper.fromString(dto.reminder ?? null);
 
-      this.validateDateRange(start, end);
+      TaskDateUtils.validateDateRange(start, end);
 
       if (dto.parentUuid !== undefined && dto.parentUuid !== null) {
         await this.validateParent(userUuid, dto.parentUuid);
       }
 
-      return await this.taskRepository.create({
+      const task = await this.taskRepository.create({
         userUuid,
         parentUuid: dto.parentUuid ?? null,
         name: dto.name.trim(),
@@ -42,29 +46,40 @@ export class CreateTaskService {
         end,
         reminder,
       });
+
+      this.logger.log('Successfully created task.', {
+        userUuid,
+        taskUuid: task.uuid,
+        parentUuid: task.parentUuid,
+        status: task.status,
+      });
+      return task;
     } catch (error) {
-      if (error instanceof TaskException) throw error;
+      if (error instanceof TaskException) {
+        if (error.getStatus() < 500) {
+          this.logger.warn('Rejected action to create task.', {
+            userUuid,
+            parentUuid: dto.parentUuid ?? null,
+            reason: error.message,
+            statusCode: error.getStatus(),
+          });
+        } else {
+          this.logger.error('Failed to create task.', undefined, {
+            userUuid,
+            parentUuid: dto.parentUuid ?? null,
+            reason: error.message,
+            statusCode: error.getStatus(),
+          });
+        }
+        throw error;
+      }
 
-      this.logger.error('Failed to create task.');
+      this.logger.error('Failed to create task.', undefined, {
+        userUuid,
+        parentUuid: dto.parentUuid ?? null,
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new TaskException();
-    }
-  }
-
-  private validateDateRange(
-    start: TaskDateEntity | null,
-    end: TaskDateEntity | null,
-  ): void {
-    if (start === null || end === null) return;
-
-    const endsOnEarlierDay = end.date < start.date;
-    const endsAtEarlierTime =
-      end.date === start.date &&
-      start.time !== null &&
-      end.time !== null &&
-      end.time < start.time;
-
-    if (endsOnEarlierDay || endsAtEarlierTime) {
-      throw new TaskValidationException('Task end cannot precede its start.');
     }
   }
 

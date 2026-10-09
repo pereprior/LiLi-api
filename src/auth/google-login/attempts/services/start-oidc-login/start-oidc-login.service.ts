@@ -17,6 +17,8 @@ export class StartOidcLoginService {
   ) {}
 
   async execute(): Promise<{ authorizationUrl: URL; state: string }> {
+    this.logger.log('Starting OIDC login attempt.');
+
     const state = AuthSecretsUtils.generate();
     const nonce = AuthSecretsUtils.generate();
     const codeVerifier = AuthSecretsUtils.generate();
@@ -28,7 +30,7 @@ export class StartOidcLoginService {
         codeVerifier,
       });
 
-      await this.prisma.oidcLoginAttempt.create({
+      const attempt = await this.prisma.oidcLoginAttempt.create({
         data: {
           stateHash: AuthSecretsUtils.hash(state),
           nonce,
@@ -37,9 +39,14 @@ export class StartOidcLoginService {
         },
       });
 
+      this.logger.log('Successfully started OIDC login attempt.', {
+        attemptUuid: attempt.uuid,
+      });
       return { authorizationUrl, state };
-    } catch {
-      this.logger.error('Failed to start OIDC login attempt.');
+    } catch (error) {
+      this.logger.error('Failed to start OIDC login attempt.', undefined, {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new ServiceUnavailableException('OIDC login is unavailable.');
     }
   }

@@ -12,13 +12,21 @@ export class RevokeSessionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(token: string): Promise<void> {
+    this.logger.log('Starting session revocation.');
+
     try {
-      await this.prisma.session.updateMany({
+      const revoked = await this.prisma.session.updateMany({
         where: { tokenHash: AuthSecretsUtils.hash(token), revokedAt: null },
         data: { revokedAt: new Date() },
       });
-    } catch {
-      this.logger.error('Failed to revoke session.');
+
+      this.logger.log('Successfully completed session revocation.', {
+        revokedCount: revoked.count,
+      });
+    } catch (error) {
+      this.logger.error('Failed to revoke session.', undefined, {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new SessionException();
     }
   }

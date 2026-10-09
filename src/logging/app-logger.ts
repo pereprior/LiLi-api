@@ -7,11 +7,22 @@ export class AppLogger {
     this.logger = new Logger(context);
   }
 
-  log(message: string): void {
-    this.logger.log(message);
+  log(message: string, context?: Record<string, unknown>): void {
+    this.logger.log(context === undefined ? message : { message, ...context });
   }
 
-  error(message: string, error?: Error): void {
-    this.logger.error(message, error?.stack);
+  warn(message: string, context?: Record<string, unknown>): void {
+    this.logger.warn(context === undefined ? message : { message, ...context });
+  }
+
+  error(
+    message: string,
+    error?: Error,
+    context?: Record<string, unknown>,
+  ): void {
+    this.logger.error(
+      context === undefined ? message : { message, ...context },
+      error?.stack,
+    );
   }
 }

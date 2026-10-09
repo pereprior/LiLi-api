@@ -17,6 +17,8 @@ export class CreateSessionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(userUuid: string): Promise<CreatedSession> {
+    this.logger.log('Starting session creation.', { userUuid });
+
     try {
       const token = AuthSecretsUtils.generate();
       const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
@@ -29,13 +31,21 @@ export class CreateSessionService {
         },
       });
 
+      this.logger.log('Successfully created session.', { userUuid, expiresAt });
       return { token, expiresAt };
     } catch (error) {
       if (PrismaErrorUtils.isRecordNotFoundError(error)) {
+        this.logger.warn('Rejected session creation.', {
+          userUuid,
+          reason: 'User is unavailable.',
+        });
         throw new SessionUserUnavailableException();
       }
 
-      this.logger.error('Failed to create session.');
+      this.logger.error('Failed to create session.', undefined, {
+        userUuid,
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       throw new SessionException();
     }
   }
