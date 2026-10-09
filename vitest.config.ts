@@ -24,7 +24,7 @@ export default defineConfig({
         'src/**/types/**',
         'src/auth/google-login/oidc/clients/google-oidc.client.ts',
       ],
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'lcovonly'],
       reportsDirectory: './coverage',
       thresholds: {
         statements: 80,
