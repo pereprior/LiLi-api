@@ -1,6 +1,6 @@
 {
   "name": "lili-api",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Private, modular assistant core",
   "private": true,
   "license": "UNLICENSED",
