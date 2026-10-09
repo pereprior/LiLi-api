@@ -44,7 +44,7 @@ describe('FindAllTasksService', () => {
       const tasks = [task];
       findAll.mockResolvedValue(tasks);
 
-      const result = await service.execute('user-1');
+      const result = await service.execute({ uuid: 'user-1' });
 
       expect(result).toBe(tasks);
       expect(findAll).toHaveBeenCalledExactlyOnceWith('user-1');
@@ -53,7 +53,7 @@ describe('FindAllTasksService', () => {
     it('returns an empty list when no tasks are visible', async () => {
       findAll.mockResolvedValue([]);
 
-      expect(await service.execute('user-1')).toEqual([]);
+      expect(await service.execute({ uuid: 'user-1' })).toEqual([]);
     });
   });
 
@@ -61,14 +61,14 @@ describe('FindAllTasksService', () => {
     const error = new TaskNotFoundException();
     findAll.mockRejectedValue(error);
 
-    await expect(service.execute('user-1')).rejects.toBe(error);
+    await expect(service.execute({ uuid: 'user-1' })).rejects.toBe(error);
   });
 
   it('hides unexpected persistence details', async () => {
     const error = new Error('private database details');
     findAll.mockRejectedValue(error);
 
-    await expect(service.execute('user-1')).rejects.toThrow(
+    await expect(service.execute({ uuid: 'user-1' })).rejects.toThrow(
       new TaskException(),
     );
   });

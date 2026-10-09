@@ -53,7 +53,7 @@ describe('CreateTaskService', () => {
       );
       create.mockResolvedValue(task);
 
-      await service.execute('user-1', { name: '  Groceries  ' });
+      await service.execute({ uuid: 'user-1' }, { name: '  Groceries  ' });
 
       expect(create).toHaveBeenCalledExactlyOnceWith({
         userUuid: 'user-1',
@@ -83,7 +83,10 @@ describe('CreateTaskService', () => {
       );
       create.mockResolvedValue(task);
 
-      const created = await service.execute('user-1', { name: 'Groceries' });
+      const created = await service.execute(
+        { uuid: 'user-1' },
+        { name: 'Groceries' },
+      );
 
       expect(created).toBe(task);
     });
@@ -103,13 +106,16 @@ describe('CreateTaskService', () => {
       );
       create.mockResolvedValue(task);
 
-      await service.execute('user-1', {
-        name: 'Groceries',
-        description: 'Buy vegetables',
-        start: '2026-07-10',
-        end: '2026-07-11T00:00',
-        reminder: '2026-07-09T06:00',
-      });
+      await service.execute(
+        { uuid: 'user-1' },
+        {
+          name: 'Groceries',
+          description: 'Buy vegetables',
+          start: '2026-07-10',
+          end: '2026-07-11T00:00',
+          reminder: '2026-07-09T06:00',
+        },
+      );
 
       expect(create).toHaveBeenCalledExactlyOnceWith({
         userUuid: 'user-1',
@@ -129,7 +135,10 @@ describe('CreateTaskService', () => {
       { start: '2026-07-11', end: '2026-07-10' },
       { start: '2026-07-10T18:30', end: '2026-07-10T18:00' },
     ])('rejects an end preceding the start: %j', async (dates) => {
-      const result = service.execute('user-1', { name: 'Groceries', ...dates });
+      const result = service.execute(
+        { uuid: 'user-1' },
+        { name: 'Groceries', ...dates },
+      );
 
       await expect(result).rejects.toThrow(
         new TaskValidationException('Task end cannot precede its start.'),
@@ -160,7 +169,10 @@ describe('CreateTaskService', () => {
         );
         create.mockResolvedValue(task);
 
-        await service.execute('user-1', { name: 'Groceries', ...dates });
+        await service.execute(
+          { uuid: 'user-1' },
+          { name: 'Groceries', ...dates },
+        );
 
         expect(create).toHaveBeenCalledOnce();
       },
@@ -205,11 +217,16 @@ describe('CreateTaskService', () => {
         );
         create.mockResolvedValue(subtask);
 
-        await service.execute('user-1', { name: 'Groceries', parentUuid });
+        await service.execute(
+          { uuid: 'user-1' },
+          { name: 'Groceries', parentUuid },
+        );
 
         expect(findTaskByUuid).toHaveBeenCalledExactlyOnceWith(
-          'user-1',
-          parentUuid,
+          { uuid: 'user-1' },
+          {
+            uuid: parentUuid,
+          },
         );
         expect(create).toHaveBeenCalledExactlyOnceWith({
           userUuid: 'user-1',
@@ -228,10 +245,13 @@ describe('CreateTaskService', () => {
       const parentUuid = '00000000-0000-4000-8000-000000000001';
       findTaskByUuid.mockRejectedValue(new TaskNotFoundException());
 
-      const result = service.execute('user-1', {
-        name: 'Groceries',
-        parentUuid,
-      });
+      const result = service.execute(
+        { uuid: 'user-1' },
+        {
+          name: 'Groceries',
+          parentUuid,
+        },
+      );
 
       await expect(result).rejects.toThrow(new TaskNotFoundException());
       expect(create).not.toHaveBeenCalled();
@@ -254,10 +274,13 @@ describe('CreateTaskService', () => {
         ),
       );
 
-      const result = service.execute('user-1', {
-        name: 'Groceries',
-        parentUuid,
-      });
+      const result = service.execute(
+        { uuid: 'user-1' },
+        {
+          name: 'Groceries',
+          parentUuid,
+        },
+      );
 
       await expect(result).rejects.toThrow(
         new TaskConflictException('Subtasks cannot have their own subtasks.'),
@@ -284,10 +307,13 @@ describe('CreateTaskService', () => {
           ),
         );
 
-        const result = service.execute('user-1', {
-          name: 'Groceries',
-          parentUuid,
-        });
+        const result = service.execute(
+          { uuid: 'user-1' },
+          {
+            name: 'Groceries',
+            parentUuid,
+          },
+        );
 
         await expect(result).rejects.toThrow(
           new TaskConflictException(
@@ -305,7 +331,7 @@ describe('CreateTaskService', () => {
       create.mockRejectedValue(error);
 
       await expect(
-        service.execute('user-1', { name: 'Groceries' }),
+        service.execute({ uuid: 'user-1' }, { name: 'Groceries' }),
       ).rejects.toBe(error);
     });
 
@@ -313,17 +339,20 @@ describe('CreateTaskService', () => {
       create.mockRejectedValue(new Error('private database details'));
 
       await expect(
-        service.execute('user-1', { name: 'Groceries' }),
+        service.execute({ uuid: 'user-1' }, { name: 'Groceries' }),
       ).rejects.toThrow(new TaskException());
     });
 
     it('hides unexpected principal lookup failures without creating a subtask', async () => {
       findTaskByUuid.mockRejectedValue(new Error('private database details'));
 
-      const result = service.execute('user-1', {
-        name: 'Groceries',
-        parentUuid: '00000000-0000-4000-8000-000000000001',
-      });
+      const result = service.execute(
+        { uuid: 'user-1' },
+        {
+          name: 'Groceries',
+          parentUuid: '00000000-0000-4000-8000-000000000001',
+        },
+      );
 
       await expect(result).rejects.toThrow(new TaskException());
       expect(create).not.toHaveBeenCalled();

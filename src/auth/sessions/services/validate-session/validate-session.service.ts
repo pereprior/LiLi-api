@@ -5,7 +5,7 @@ import { SessionException } from '#src/auth/sessions/exceptions/session.exceptio
 import type { AuthConfig } from '#src/auth/types/auth-config.type.js';
 import { AuthSecretsUtils } from '#src/auth/utils/auth-secrets/auth-secrets.utils.js';
 import { PrismaService } from '#src/database/prisma.service.js';
-import { AppLogger } from '#src/logging/app-logger.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 
 @Injectable()
 export class ValidateSessionService {

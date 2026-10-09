@@ -48,10 +48,18 @@ describe('DeleteTaskService', () => {
       findTask.mockResolvedValue(task);
       removeTask.mockResolvedValue(undefined);
 
-      const result = await service.execute('user-1', 'task-1');
+      const result = await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+      );
 
-      expect(result).toBeUndefined();
-      expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
+      expect(result).toEqual({ success: true });
+      expect(findTask).toHaveBeenCalledExactlyOnceWith(
+        { uuid: 'user-1' },
+        {
+          uuid: 'task-1',
+        },
+      );
       expect(removeTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
     });
 
@@ -72,7 +80,7 @@ describe('DeleteTaskService', () => {
       findTask.mockReturnValue(lookup.promise);
       removeTask.mockResolvedValue(undefined);
 
-      const result = service.execute('user-1', 'task-1');
+      const result = service.execute({ uuid: 'user-1' }, { uuid: 'task-1' });
 
       expect(removeTask).not.toHaveBeenCalled();
       lookup.resolve(task);
@@ -86,16 +94,18 @@ describe('DeleteTaskService', () => {
       const error = new TaskNotFoundException();
       findTask.mockRejectedValue(error);
 
-      await expect(service.execute('user-1', 'task-1')).rejects.toBe(error);
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toBe(error);
       expect(removeTask).not.toHaveBeenCalled();
     });
 
     it('hides unexpected lookup details without changing persistence', async () => {
       findTask.mockRejectedValue(new Error('private lookup details'));
 
-      await expect(service.execute('user-1', 'task-1')).rejects.toThrow(
-        new TaskException(),
-      );
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toThrow(new TaskException());
       expect(removeTask).not.toHaveBeenCalled();
     });
   });
@@ -117,7 +127,9 @@ describe('DeleteTaskService', () => {
     const error = new TaskNotFoundException();
     removeTask.mockRejectedValue(error);
 
-    await expect(service.execute('user-1', 'task-1')).rejects.toBe(error);
+    await expect(
+      service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+    ).rejects.toBe(error);
   });
 
   it('hides unexpected persistence details', async () => {
@@ -137,8 +149,8 @@ describe('DeleteTaskService', () => {
     const error = new Error('private database details');
     removeTask.mockRejectedValue(error);
 
-    await expect(service.execute('user-1', 'task-1')).rejects.toThrow(
-      new TaskException(),
-    );
+    await expect(
+      service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+    ).rejects.toThrow(new TaskException());
   });
 });

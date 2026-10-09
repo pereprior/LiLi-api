@@ -177,6 +177,9 @@ or official documentation.
 - `src/`: application source, including bootstrap, root composition, and
   feature-oriented modules such as tasks and reminders.
 
+- `src/shared/`: DTOs, responses, logging, utilities, and validators shared
+  across feature modules. Keep domain-specific code within its owning module.
+
 - `.github/workflows/`: continuous-integration workflows.
 
 - `.agents/skills/`: project and technology guidance, not application source

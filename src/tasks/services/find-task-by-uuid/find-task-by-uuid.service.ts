@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { AppLogger } from '#src/logging/app-logger.js';
+import type { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
@@ -12,16 +13,25 @@ export class FindTaskByUuidService {
 
   constructor(private readonly taskRepository: TaskRepository) {}
 
-  async execute(userUuid: string, uuid: string): Promise<TaskEntity> {
-    this.logger.log('Starting to find task.', { userUuid, taskUuid: uuid });
+  async execute(
+    userUuidDto: ParamUuidDto,
+    uuidDto: ParamUuidDto,
+  ): Promise<TaskEntity> {
+    this.logger.log('Starting to find task.', {
+      userUuid: userUuidDto.uuid,
+      taskUuid: uuidDto.uuid,
+    });
 
     try {
-      const task = await this.taskRepository.findByUuid(userUuid, uuid);
+      const task = await this.taskRepository.findByUuid(
+        userUuidDto.uuid,
+        uuidDto.uuid,
+      );
       if (task === null) throw new TaskNotFoundException();
 
       this.logger.log('Successfully found task.', {
-        userUuid,
-        taskUuid: uuid,
+        userUuid: userUuidDto.uuid,
+        taskUuid: uuidDto.uuid,
         status: task.status,
       });
       return task;
@@ -29,15 +39,15 @@ export class FindTaskByUuidService {
       if (error instanceof TaskException) {
         if (error.getStatus() < 500) {
           this.logger.warn('Rejected action to find task.', {
-            userUuid,
-            taskUuid: uuid,
+            userUuid: userUuidDto.uuid,
+            taskUuid: uuidDto.uuid,
             reason: error.message,
             statusCode: error.getStatus(),
           });
         } else {
           this.logger.error('Failed to find task.', undefined, {
-            userUuid,
-            taskUuid: uuid,
+            userUuid: userUuidDto.uuid,
+            taskUuid: uuidDto.uuid,
             reason: error.message,
             statusCode: error.getStatus(),
           });
@@ -46,8 +56,8 @@ export class FindTaskByUuidService {
       }
 
       this.logger.error('Failed to find task.', undefined, {
-        userUuid,
-        taskUuid: uuid,
+        userUuid: userUuidDto.uuid,
+        taskUuid: uuidDto.uuid,
         errorType: error instanceof Error ? error.name : typeof error,
       });
       throw new TaskException();

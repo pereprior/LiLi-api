@@ -43,7 +43,7 @@ describe('FindTaskByUuidService', () => {
       );
       findByUuid.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1');
+      await service.execute({ uuid: 'user-1' }, { uuid: 'task-1' });
 
       expect(findByUuid).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
     });
@@ -73,7 +73,10 @@ describe('FindTaskByUuidService', () => {
         );
         findByUuid.mockResolvedValue(task);
 
-        const found = await service.execute('user-1', 'task-1');
+        const found = await service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+        );
 
         expect(found).toBe(task);
       },
@@ -94,7 +97,10 @@ describe('FindTaskByUuidService', () => {
       );
       findByUuid.mockResolvedValue(subtask);
 
-      const found = await service.execute('user-1', subtask.uuid);
+      const found = await service.execute(
+        { uuid: 'user-1' },
+        { uuid: subtask.uuid },
+      );
 
       expect(found).toBe(subtask);
       expect(findByUuid).toHaveBeenCalledExactlyOnceWith(
@@ -108,9 +114,9 @@ describe('FindTaskByUuidService', () => {
     it('reports not found when the repository returns no visible task', async () => {
       findByUuid.mockResolvedValue(null);
 
-      await expect(service.execute('user-1', 'task-1')).rejects.toThrow(
-        new TaskNotFoundException(),
-      );
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toThrow(new TaskNotFoundException());
     });
   });
 
@@ -119,15 +125,17 @@ describe('FindTaskByUuidService', () => {
       const error = new TaskNotFoundException();
       findByUuid.mockRejectedValue(error);
 
-      await expect(service.execute('user-1', 'task-1')).rejects.toBe(error);
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toBe(error);
     });
 
     it('hides unexpected lookup details', async () => {
       findByUuid.mockRejectedValue(new Error('private database details'));
 
-      await expect(service.execute('user-1', 'task-1')).rejects.toThrow(
-        new TaskException(),
-      );
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toThrow(new TaskException());
     });
   });
 });

@@ -3,7 +3,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleOidcClient } from '#src/auth/google-login/oidc/clients/google-oidc.client.js';
 import { AuthSecretsUtils } from '#src/auth/utils/auth-secrets/auth-secrets.utils.js';
 import { PrismaService } from '#src/database/prisma.service.js';
-import { AppLogger } from '#src/logging/app-logger.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 
 const LOGIN_ATTEMPT_TTL_MS = 10 * 60 * 1000;
 

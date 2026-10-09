@@ -48,12 +48,21 @@ describe('UpdateTaskStatusService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      const result = await service.execute('user-1', 'task-1', {
-        status: 'IN_PROGRESS',
-      });
+      const result = await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        {
+          status: 'IN_PROGRESS',
+        },
+      );
 
       expect(result).toBe(task);
-      expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
+      expect(findTask).toHaveBeenCalledExactlyOnceWith(
+        { uuid: 'user-1' },
+        {
+          uuid: 'task-1',
+        },
+      );
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         status: 'IN_PROGRESS',
       });
@@ -76,9 +85,13 @@ describe('UpdateTaskStatusService', () => {
       findTask.mockReturnValue(lookup.promise);
       update.mockResolvedValue(task);
 
-      const result = service.execute('user-1', 'task-1', {
-        status: 'IN_PROGRESS',
-      });
+      const result = service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        {
+          status: 'IN_PROGRESS',
+        },
+      );
 
       expect(update).not.toHaveBeenCalled();
       lookup.resolve(task);
@@ -93,7 +106,11 @@ describe('UpdateTaskStatusService', () => {
       findTask.mockRejectedValue(error);
 
       await expect(
-        service.execute('user-1', 'task-1', { status: 'IN_PROGRESS' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { status: 'IN_PROGRESS' },
+        ),
       ).rejects.toBe(error);
       expect(update).not.toHaveBeenCalled();
     });
@@ -102,7 +119,11 @@ describe('UpdateTaskStatusService', () => {
       findTask.mockRejectedValue(new Error('private lookup details'));
 
       await expect(
-        service.execute('user-1', 'task-1', { status: 'IN_PROGRESS' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { status: 'IN_PROGRESS' },
+        ),
       ).rejects.toThrow(new TaskException());
       expect(update).not.toHaveBeenCalled();
     });
@@ -135,7 +156,11 @@ describe('UpdateTaskStatusService', () => {
         findTask.mockResolvedValue(task);
         update.mockResolvedValue(task);
 
-        await service.execute('user-1', 'task-1', { status });
+        await service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { status },
+        );
 
         expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
           status,
@@ -162,7 +187,11 @@ describe('UpdateTaskStatusService', () => {
     update.mockRejectedValue(error);
 
     await expect(
-      service.execute('user-1', 'task-1', { status: 'IN_PROGRESS' }),
+      service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { status: 'IN_PROGRESS' },
+      ),
     ).rejects.toBe(error);
   });
 
@@ -184,7 +213,11 @@ describe('UpdateTaskStatusService', () => {
     update.mockRejectedValue(error);
 
     await expect(
-      service.execute('user-1', 'task-1', { status: 'IN_PROGRESS' }),
+      service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { status: 'IN_PROGRESS' },
+      ),
     ).rejects.toThrow(new TaskException());
   });
 });

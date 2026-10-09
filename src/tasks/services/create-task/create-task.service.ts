@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { AppLogger } from '#src/logging/app-logger.js';
+import type { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 import type { CreateTaskDto } from '#src/tasks/dto/create-task.dto.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
@@ -19,9 +20,12 @@ export class CreateTaskService {
     private readonly findTaskByUuid: FindTaskByUuidService,
   ) {}
 
-  async execute(userUuid: string, dto: CreateTaskDto): Promise<TaskEntity> {
+  async execute(
+    userUuidDto: ParamUuidDto,
+    dto: CreateTaskDto,
+  ): Promise<TaskEntity> {
     this.logger.log('Starting to create task.', {
-      userUuid,
+      userUuid: userUuidDto.uuid,
       parentUuid: dto.parentUuid ?? null,
     });
 
@@ -33,11 +37,11 @@ export class CreateTaskService {
       TaskDateUtils.validateDateRange(start, end);
 
       if (dto.parentUuid !== undefined && dto.parentUuid !== null) {
-        await this.validateParent(userUuid, dto.parentUuid);
+        await this.validateParent(userUuidDto, dto.parentUuid);
       }
 
       const task = await this.taskRepository.create({
-        userUuid,
+        userUuid: userUuidDto.uuid,
         parentUuid: dto.parentUuid ?? null,
         name: dto.name.trim(),
         description: dto.description ?? null,
@@ -48,7 +52,7 @@ export class CreateTaskService {
       });
 
       this.logger.log('Successfully created task.', {
-        userUuid,
+        userUuid: userUuidDto.uuid,
         taskUuid: task.uuid,
         parentUuid: task.parentUuid,
         status: task.status,
@@ -58,14 +62,14 @@ export class CreateTaskService {
       if (error instanceof TaskException) {
         if (error.getStatus() < 500) {
           this.logger.warn('Rejected action to create task.', {
-            userUuid,
+            userUuid: userUuidDto.uuid,
             parentUuid: dto.parentUuid ?? null,
             reason: error.message,
             statusCode: error.getStatus(),
           });
         } else {
           this.logger.error('Failed to create task.', undefined, {
-            userUuid,
+            userUuid: userUuidDto.uuid,
             parentUuid: dto.parentUuid ?? null,
             reason: error.message,
             statusCode: error.getStatus(),
@@ -75,7 +79,7 @@ export class CreateTaskService {
       }
 
       this.logger.error('Failed to create task.', undefined, {
-        userUuid,
+        userUuid: userUuidDto.uuid,
         parentUuid: dto.parentUuid ?? null,
         errorType: error instanceof Error ? error.name : typeof error,
       });
@@ -84,10 +88,12 @@ export class CreateTaskService {
   }
 
   private async validateParent(
-    userUuid: string,
+    userUuidDto: ParamUuidDto,
     parentUuid: string,
   ): Promise<void> {
-    const parent = await this.findTaskByUuid.execute(userUuid, parentUuid);
+    const parent = await this.findTaskByUuid.execute(userUuidDto, {
+      uuid: parentUuid,
+    });
 
     if (parent.parentUuid !== null) {
       throw new TaskConflictException(

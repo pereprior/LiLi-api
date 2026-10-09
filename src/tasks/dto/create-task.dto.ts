@@ -1,7 +1,7 @@
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 
-import { IsDateOrDateTime } from '#src/validators/is-date-or-date-time.validator.js';
-import { IsRequiredString } from '#src/validators/is-required-string.validator.js';
+import { IsDateOrDateTime } from '#src/shared/validators/is-date-or-date-time.validator.js';
+import { IsRequiredString } from '#src/shared/validators/is-required-string.validator.js';
 
 export class CreateTaskDto {
   @IsRequiredString()

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { AppLogger } from '#src/logging/app-logger.js';
+import type { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 import type { UpdateTaskDetailsDto } from '#src/tasks/dto/update-task-details.dto.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
@@ -20,18 +21,18 @@ export class UpdateTaskDetailsService {
   ) {}
 
   async execute(
-    userUuid: string,
-    uuid: string,
+    userUuidDto: ParamUuidDto,
+    uuidDto: ParamUuidDto,
     dto: UpdateTaskDetailsDto,
   ): Promise<TaskEntity> {
     this.logger.log('Starting to update task details.', {
-      userUuid,
-      taskUuid: uuid,
+      userUuid: userUuidDto.uuid,
+      taskUuid: uuidDto.uuid,
       fields: Object.keys(dto),
     });
 
     try {
-      const task = await this.findTaskByUuid.execute(userUuid, uuid);
+      const task = await this.findTaskByUuid.execute(userUuidDto, uuidDto);
       const data: UpdateTaskData = {};
 
       if (dto.name !== undefined) data.name = dto.name.trim();
@@ -47,11 +48,15 @@ export class UpdateTaskDetailsService {
         data.end === undefined ? task.end : data.end,
       );
 
-      const updated = await this.taskRepository.update(userUuid, uuid, data);
+      const updated = await this.taskRepository.update(
+        userUuidDto.uuid,
+        uuidDto.uuid,
+        data,
+      );
 
       this.logger.log('Successfully updated task details.', {
-        userUuid,
-        taskUuid: uuid,
+        userUuid: userUuidDto.uuid,
+        taskUuid: uuidDto.uuid,
         fields: Object.keys(data),
       });
       return updated;
@@ -59,16 +64,16 @@ export class UpdateTaskDetailsService {
       if (error instanceof TaskException) {
         if (error.getStatus() < 500) {
           this.logger.warn('Rejected action to update task details.', {
-            userUuid,
-            taskUuid: uuid,
+            userUuid: userUuidDto.uuid,
+            taskUuid: uuidDto.uuid,
             fields: Object.keys(dto),
             reason: error.message,
             statusCode: error.getStatus(),
           });
         } else {
           this.logger.error('Failed to update task details.', undefined, {
-            userUuid,
-            taskUuid: uuid,
+            userUuid: userUuidDto.uuid,
+            taskUuid: uuidDto.uuid,
             fields: Object.keys(dto),
             reason: error.message,
             statusCode: error.getStatus(),
@@ -78,8 +83,8 @@ export class UpdateTaskDetailsService {
       }
 
       this.logger.error('Failed to update task details.', undefined, {
-        userUuid,
-        taskUuid: uuid,
+        userUuid: userUuidDto.uuid,
+        taskUuid: uuidDto.uuid,
         fields: Object.keys(dto),
         errorType: error instanceof Error ? error.name : typeof error,
       });

@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { SessionException } from '#src/auth/sessions/exceptions/session.exception.js';
 import { AuthSecretsUtils } from '#src/auth/utils/auth-secrets/auth-secrets.utils.js';
 import { PrismaService } from '#src/database/prisma.service.js';
-import { AppLogger } from '#src/logging/app-logger.js';
+import { AppLogger } from '#src/shared/logging/app-logger.js';
 
 @Injectable()
 export class RevokeSessionService {

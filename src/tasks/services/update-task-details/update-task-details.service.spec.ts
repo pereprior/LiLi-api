@@ -50,12 +50,21 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1', { name: '  Dinner  ' });
+      await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { name: '  Dinner  ' },
+      );
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         name: 'Dinner',
       });
-      expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
+      expect(findTask).toHaveBeenCalledExactlyOnceWith(
+        { uuid: 'user-1' },
+        {
+          uuid: 'task-1',
+        },
+      );
     });
 
     it('returns the persisted task', async () => {
@@ -87,7 +96,11 @@ describe('UpdateTaskDetailsService', () => {
       update.mockResolvedValue(updated);
 
       expect(
-        await service.execute('user-1', 'task-1', { name: 'Dinner' }),
+        await service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Dinner' },
+        ),
       ).toBe(updated);
     });
 
@@ -107,12 +120,16 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1', {
-        description: 'Weekly',
-        start: '2026-10-10',
-        end: '2026-10-10T00:00',
-        reminder: '2026-10-09T18:00',
-      });
+      await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        {
+          description: 'Weekly',
+          start: '2026-10-10',
+          end: '2026-10-10T00:00',
+          reminder: '2026-10-09T18:00',
+        },
+      );
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         description: 'Weekly',
@@ -138,12 +155,16 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1', {
-        description: null,
-        start: null,
-        end: null,
-        reminder: null,
-      });
+      await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        {
+          description: null,
+          start: null,
+          end: null,
+          reminder: null,
+        },
+      );
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         description: null,
@@ -169,7 +190,7 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1', {});
+      await service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }, {});
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {});
     });
@@ -218,7 +239,9 @@ describe('UpdateTaskDetailsService', () => {
         );
         findTask.mockResolvedValue(task);
 
-        await expect(service.execute('user-1', 'task-1', dto)).rejects.toThrow(
+        await expect(
+          service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }, dto),
+        ).rejects.toThrow(
           new TaskValidationException('Task end cannot precede its start.'),
         );
         expect(update).not.toHaveBeenCalled();
@@ -247,7 +270,7 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockResolvedValue(task);
       update.mockResolvedValue(task);
 
-      await service.execute('user-1', 'task-1', dto);
+      await service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }, dto);
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         start: new TaskDateEntity(
@@ -268,7 +291,11 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockRejectedValue(error);
 
       await expect(
-        service.execute('user-1', 'task-1', { name: 'Dinner' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Dinner' },
+        ),
       ).rejects.toBe(error);
       expect(update).not.toHaveBeenCalled();
     });
@@ -277,7 +304,11 @@ describe('UpdateTaskDetailsService', () => {
       findTask.mockRejectedValue(new Error('private lookup details'));
 
       await expect(
-        service.execute('user-1', 'task-1', { name: 'Dinner' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Dinner' },
+        ),
       ).rejects.toThrow(new TaskException());
       expect(update).not.toHaveBeenCalled();
     });
@@ -300,7 +331,11 @@ describe('UpdateTaskDetailsService', () => {
       update.mockRejectedValue(error);
 
       await expect(
-        service.execute('user-1', 'task-1', { name: 'Dinner' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Dinner' },
+        ),
       ).rejects.toBe(error);
     });
 
@@ -321,7 +356,11 @@ describe('UpdateTaskDetailsService', () => {
       update.mockRejectedValue(new Error('private database details'));
 
       await expect(
-        service.execute('user-1', 'task-1', { name: 'Dinner' }),
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Dinner' },
+        ),
       ).rejects.toThrow(new TaskException());
     });
   });

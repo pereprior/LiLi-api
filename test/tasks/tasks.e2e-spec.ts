@@ -71,9 +71,12 @@ describe('Tasks', () => {
         },
       });
 
-      const created = await create.execute(user.uuid, {
-        name: '  Groceries  ',
-      });
+      const created = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: '  Groceries  ',
+        },
+      );
       const stored = await prisma.task.findUniqueOrThrow({
         where: { uuid: created.uuid },
       });
@@ -107,12 +110,15 @@ describe('Tasks', () => {
         },
       });
 
-      const created = await create.execute(user.uuid, {
-        name: 'Groceries',
-        start: '2026-07-10',
-        end: '2026-07-11T00:00',
-        reminder: '2026-07-09T06:00',
-      });
+      const created = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          start: '2026-07-10',
+          end: '2026-07-11T00:00',
+          reminder: '2026-07-09T06:00',
+        },
+      );
       const stored = await prisma.task.findUniqueOrThrow({
         where: { uuid: created.uuid },
       });
@@ -140,10 +146,13 @@ describe('Tasks', () => {
         },
       });
 
-      const result = create.execute(user.uuid, {
-        name: 'Groceries',
-        start: '2026-03-29T02:30',
-      });
+      const result = create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          start: '2026-03-29T02:30',
+        },
+      );
 
       await expect(result).rejects.toThrow(
         new TaskValidationException(
@@ -164,13 +173,22 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const parent = await create.execute(user.uuid, { name: 'Dinner' });
-      const subtask = await create.execute(user.uuid, {
-        name: 'Groceries',
-        parentUuid: parent.uuid,
-      });
+      const parent = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
+      const subtask = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          parentUuid: parent.uuid,
+        },
+      );
 
-      const found = await findByUuid.execute(user.uuid, subtask.uuid);
+      const found = await findByUuid.execute(
+        { uuid: user.uuid },
+        { uuid: subtask.uuid },
+      );
 
       expect(found).toEqual(subtask);
     });
@@ -184,12 +202,18 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const parent = await create.execute(user.uuid, { name: 'Dinner' });
+      const parent = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
 
-      const subtask = await create.execute(user.uuid, {
-        name: 'Groceries',
-        parentUuid: parent.uuid,
-      });
+      const subtask = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          parentUuid: parent.uuid,
+        },
+      );
 
       expect(subtask).toEqual(
         new TaskEntity(
@@ -223,12 +247,18 @@ describe('Tasks', () => {
           email: 'other@example.com',
         },
       });
-      const parent = await create.execute(owner.uuid, { name: 'Dinner' });
+      const parent = await create.execute(
+        { uuid: owner.uuid },
+        { name: 'Dinner' },
+      );
 
-      const result = create.execute(otherUser.uuid, {
-        name: 'Groceries',
-        parentUuid: parent.uuid,
-      });
+      const result = create.execute(
+        { uuid: otherUser.uuid },
+        {
+          name: 'Groceries',
+          parentUuid: parent.uuid,
+        },
+      );
 
       await expect(result).rejects.toThrow(new TaskNotFoundException());
       expect(
@@ -247,10 +277,13 @@ describe('Tasks', () => {
         data: { userUuid: user.uuid, name: 'Dinner', deletedAt: new Date() },
       });
 
-      const result = create.execute(user.uuid, {
-        name: 'Groceries',
-        parentUuid: parent.uuid,
-      });
+      const result = create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          parentUuid: parent.uuid,
+        },
+      );
 
       await expect(result).rejects.toThrow(new TaskNotFoundException());
       expect(
@@ -265,16 +298,25 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const parent = await create.execute(user.uuid, { name: 'Dinner' });
-      const subtask = await create.execute(user.uuid, {
-        name: 'Groceries',
-        parentUuid: parent.uuid,
-      });
+      const parent = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
+      const subtask = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Groceries',
+          parentUuid: parent.uuid,
+        },
+      );
 
-      const result = create.execute(user.uuid, {
-        name: 'Vegetables',
-        parentUuid: subtask.uuid,
-      });
+      const result = create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Vegetables',
+          parentUuid: subtask.uuid,
+        },
+      );
 
       await expect(result).rejects.toThrow(
         new TaskConflictException('Subtasks cannot have their own subtasks.'),
@@ -297,10 +339,13 @@ describe('Tasks', () => {
           data: { userUuid: user.uuid, name: 'Dinner', status },
         });
 
-        const result = create.execute(user.uuid, {
-          name: 'Groceries',
-          parentUuid: parent.uuid,
-        });
+        const result = create.execute(
+          { uuid: user.uuid },
+          {
+            name: 'Groceries',
+            parentUuid: parent.uuid,
+          },
+        );
 
         await expect(result).rejects.toThrow(
           new TaskConflictException(
@@ -328,11 +373,17 @@ describe('Tasks', () => {
           email: 'other@example.com',
         },
       });
-      const first = await create.execute(user.uuid, { name: 'Dinner' });
-      const second = await create.execute(user.uuid, {
-        name: 'Ingredients',
-        parentUuid: first.uuid,
-      });
+      const first = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
+      const second = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Ingredients',
+          parentUuid: first.uuid,
+        },
+      );
       await prisma.task.update({
         where: { uuid: first.uuid },
         data: { createdAt: new Date('2026-10-09T10:00:00Z') },
@@ -341,12 +392,15 @@ describe('Tasks', () => {
         where: { uuid: second.uuid },
         data: { createdAt: new Date('2026-10-09T11:00:00Z') },
       });
-      await create.execute(other.uuid, { name: 'Private' });
+      await create.execute({ uuid: other.uuid }, { name: 'Private' });
       await prisma.task.create({
         data: { userUuid: user.uuid, name: 'Deleted', deletedAt: new Date() },
       });
 
-      expect(await findAll.execute(user.uuid)).toEqual([first, second]);
+      expect(await findAll.execute({ uuid: user.uuid })).toEqual([
+        first,
+        second,
+      ]);
     });
 
     it('returns an empty list for a user without visible tasks', async () => {
@@ -357,7 +411,7 @@ describe('Tasks', () => {
         },
       });
 
-      expect(await findAll.execute(user.uuid)).toEqual([]);
+      expect(await findAll.execute({ uuid: user.uuid })).toEqual([]);
     });
   });
 
@@ -369,25 +423,34 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, {
-        name: 'Dinner',
-        description: 'Family',
-        start: '2026-10-10',
-        end: '2026-10-11',
-        reminder: '2026-10-09T18:00',
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Dinner',
+          description: 'Family',
+          start: '2026-10-10',
+          end: '2026-10-11',
+          reminder: '2026-10-09T18:00',
+        },
+      );
 
-      const updated = await updateDetails.execute(user.uuid, task.uuid, {
-        name: '  Lunch  ',
-        end: '2026-10-12T00:00',
-      });
+      const updated = await updateDetails.execute(
+        { uuid: user.uuid },
+        { uuid: task.uuid },
+        {
+          name: '  Lunch  ',
+          end: '2026-10-12T00:00',
+        },
+      );
 
       expect(updated).toEqual({
         ...task,
         name: 'Lunch',
         end: new TaskDateEntity('2026-10-12', '00:00'),
       });
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(updated);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(updated);
     });
 
     it('persists explicit null values as cleared fields', async () => {
@@ -397,22 +460,31 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, {
-        name: 'Dinner',
-        description: 'Family',
-        start: '2026-10-10',
-        end: '2026-10-11',
-        reminder: '2026-10-09T18:00',
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Dinner',
+          description: 'Family',
+          start: '2026-10-10',
+          end: '2026-10-11',
+          reminder: '2026-10-09T18:00',
+        },
+      );
 
-      await updateDetails.execute(user.uuid, task.uuid, {
-        description: null,
-        start: null,
-        end: null,
-        reminder: null,
-      });
+      await updateDetails.execute(
+        { uuid: user.uuid },
+        { uuid: task.uuid },
+        {
+          description: null,
+          start: null,
+          end: null,
+          reminder: null,
+        },
+      );
 
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual({
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual({
         ...task,
         description: null,
         start: null,
@@ -428,21 +500,30 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, {
-        name: 'Dinner',
-        start: '2026-10-10',
-        end: '2026-10-11',
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Dinner',
+          start: '2026-10-10',
+          end: '2026-10-11',
+        },
+      );
 
       await expect(
-        updateDetails.execute(user.uuid, task.uuid, {
-          name: 'Lunch',
-          end: '2026-10-09',
-        }),
+        updateDetails.execute(
+          { uuid: user.uuid },
+          { uuid: task.uuid },
+          {
+            name: 'Lunch',
+            end: '2026-10-09',
+          },
+        ),
       ).rejects.toThrow(
         new TaskValidationException('Task end cannot precede its start.'),
       );
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
     });
 
     it('rejects a nonexistent Madrid local time without persisting other fields', async () => {
@@ -452,15 +533,24 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
 
       await expect(
-        updateDetails.execute(user.uuid, task.uuid, {
-          name: 'Lunch',
-          reminder: '2026-03-29T02:30',
-        }),
+        updateDetails.execute(
+          { uuid: user.uuid },
+          { uuid: task.uuid },
+          {
+            name: 'Lunch',
+            reminder: '2026-03-29T02:30',
+          },
+        ),
       ).rejects.toBeInstanceOf(TaskValidationException);
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
     });
   });
 
@@ -480,17 +570,26 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, {
-        name: 'Dinner',
-        start: '2026-10-10',
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Dinner',
+          start: '2026-10-10',
+        },
+      );
 
-      const updated = await updateStatus.execute(user.uuid, task.uuid, {
-        status,
-      });
+      const updated = await updateStatus.execute(
+        { uuid: user.uuid },
+        { uuid: task.uuid },
+        {
+          status,
+        },
+      );
 
       expect(updated).toEqual({ ...task, status });
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(updated);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(updated);
     });
   });
 
@@ -502,10 +601,17 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
 
-      await deleteTask.execute(user.uuid, task.uuid);
+      const result = await deleteTask.execute(
+        { uuid: user.uuid },
+        { uuid: task.uuid },
+      );
 
+      expect(result).toEqual({ success: true });
       expect(
         await prisma.task.findUnique({ where: { uuid: task.uuid } }),
       ).toBeNull();
@@ -518,13 +624,19 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
-      const subtask = await create.execute(user.uuid, {
-        name: 'Ingredients',
-        parentUuid: task.uuid,
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
+      const subtask = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Ingredients',
+          parentUuid: task.uuid,
+        },
+      );
 
-      await deleteTask.execute(user.uuid, task.uuid);
+      await deleteTask.execute({ uuid: user.uuid }, { uuid: task.uuid });
 
       expect(
         await prisma.task.findUnique({ where: { uuid: subtask.uuid } }),
@@ -538,15 +650,23 @@ describe('Tasks', () => {
           email: 'owner@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
-      const subtask = await create.execute(user.uuid, {
-        name: 'Ingredients',
-        parentUuid: task.uuid,
-      });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
+      const subtask = await create.execute(
+        { uuid: user.uuid },
+        {
+          name: 'Ingredients',
+          parentUuid: task.uuid,
+        },
+      );
 
-      await deleteTask.execute(user.uuid, subtask.uuid);
+      await deleteTask.execute({ uuid: user.uuid }, { uuid: subtask.uuid });
 
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
       expect(
         await prisma.task.findUnique({ where: { uuid: subtask.uuid } }),
       ).toBeNull();
@@ -567,12 +687,21 @@ describe('Tasks', () => {
           email: 'other@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
 
       await expect(
-        updateDetails.execute(other.uuid, task.uuid, { name: 'Changed' }),
+        updateDetails.execute(
+          { uuid: other.uuid },
+          { uuid: task.uuid },
+          { name: 'Changed' },
+        ),
       ).rejects.toThrow(new TaskNotFoundException());
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
     });
 
     it('rejects a soft-deleted task without changing persistence', async () => {
@@ -591,7 +720,11 @@ describe('Tasks', () => {
       });
 
       await expect(
-        updateDetails.execute(other.uuid, task.uuid, { name: 'Changed' }),
+        updateDetails.execute(
+          { uuid: other.uuid },
+          { uuid: task.uuid },
+          { name: 'Changed' },
+        ),
       ).rejects.toThrow(new TaskNotFoundException());
       expect(
         await prisma.task.findUnique({ where: { uuid: task.uuid } }),
@@ -613,12 +746,21 @@ describe('Tasks', () => {
           email: 'other@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
+      );
 
       await expect(
-        updateStatus.execute(other.uuid, task.uuid, { status: 'COMPLETED' }),
+        updateStatus.execute(
+          { uuid: other.uuid },
+          { uuid: task.uuid },
+          { status: 'COMPLETED' },
+        ),
       ).rejects.toThrow(new TaskNotFoundException());
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
     });
 
     it('rejects a soft-deleted task without changing persistence', async () => {
@@ -637,7 +779,11 @@ describe('Tasks', () => {
       });
 
       await expect(
-        updateStatus.execute(other.uuid, task.uuid, { status: 'COMPLETED' }),
+        updateStatus.execute(
+          { uuid: other.uuid },
+          { uuid: task.uuid },
+          { status: 'COMPLETED' },
+        ),
       ).rejects.toThrow(new TaskNotFoundException());
       expect(
         await prisma.task.findUnique({ where: { uuid: task.uuid } }),
@@ -659,12 +805,17 @@ describe('Tasks', () => {
           email: 'other@example.com',
         },
       });
-      const task = await create.execute(user.uuid, { name: 'Dinner' });
-
-      await expect(deleteTask.execute(other.uuid, task.uuid)).rejects.toThrow(
-        new TaskNotFoundException(),
+      const task = await create.execute(
+        { uuid: user.uuid },
+        { name: 'Dinner' },
       );
-      expect(await findByUuid.execute(user.uuid, task.uuid)).toEqual(task);
+
+      await expect(
+        deleteTask.execute({ uuid: other.uuid }, { uuid: task.uuid }),
+      ).rejects.toThrow(new TaskNotFoundException());
+      expect(
+        await findByUuid.execute({ uuid: user.uuid }, { uuid: task.uuid }),
+      ).toEqual(task);
     });
 
     it('rejects a soft-deleted task without changing persistence', async () => {
@@ -682,9 +833,9 @@ describe('Tasks', () => {
         },
       });
 
-      await expect(deleteTask.execute(other.uuid, task.uuid)).rejects.toThrow(
-        new TaskNotFoundException(),
-      );
+      await expect(
+        deleteTask.execute({ uuid: other.uuid }, { uuid: task.uuid }),
+      ).rejects.toThrow(new TaskNotFoundException());
       expect(
         await prisma.task.findUnique({ where: { uuid: task.uuid } }),
       ).toEqual(task);
