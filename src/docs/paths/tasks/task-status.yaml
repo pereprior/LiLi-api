@@ -1,0 +1,81 @@
+patch:
+  tags: [Tareas]
+  operationId: updateTaskStatus
+  summary: Cambiar manualmente el estado de una tarea
+  description: |
+    Solicita uno de los siete estados de `TaskStatus`. Programar exige una
+    fecha de inicio propia. Las fechas no cambian el estado automáticamente.
+    Pedir el estado actual devuelve la tarea sin modificarla, incluso si es
+    terminal. Una tarea completada o cancelada no puede pasar a otro estado.
+
+    El estado de la principal limita los de sus subtareas visibles según la
+    matriz de `TaskStatus`. Completar una principal exige subtareas completadas
+    o canceladas y no las completa automáticamente. Cancelarla cancela también
+    sus subtareas visibles; si alguna está completada se rechaza toda la
+    operación. Las subtareas archivadas no participan en estas comprobaciones.
+    Cambiar una subtarea no cambia el estado de la principal.
+
+    Las lecturas, validaciones y cambios se realizan en una transacción. Un
+    fallo revierte los cambios, incluido cualquier cambio de las subtareas.
+    Los conflictos concurrentes se devuelven como 409, sin reintento automático.
+  security:
+    - sessionCookie: []
+  parameters:
+    - $ref: ../../components/parameters/task-uuid.yaml
+    - $ref: ../../components/parameters/origin.yaml
+    - $ref: ../../components/parameters/referer.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/tasks/update-task-status.yaml
+  responses:
+    '200':
+      description: Tarea con el estado solicitado.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/tasks/task.yaml
+    '400':
+      description: UUID o cuerpo inválidos, estado no permitido o intento de programar sin inicio.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '403':
+      description: Faltan Origin y Referer, o el origen recibido no coincide con APP_ORIGIN.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '404':
+      description: La tarea o su principal no existen, están eliminadas o no pertenecen al usuario.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '409':
+      description: El cambio viola las reglas de estados, la tarea es terminal, una subtarea completada impide cancelar o existe un conflicto concurrente.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml

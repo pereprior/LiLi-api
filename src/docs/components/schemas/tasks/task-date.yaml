@@ -1,0 +1,21 @@
+type: object
+nullable: true
+description: |
+  Representación de una fecha en la entidad de tarea, separada en día y hora
+  local de `Europe/Madrid`. El objeto completo puede ser `null`. Una hora
+  `null` distingue una fecha sin hora de una medianoche explícita `00:00`.
+required:
+  - date
+  - time
+properties:
+  date:
+    type: string
+    format: date
+    description: Día local del calendario.
+    example: '2026-10-15'
+  time:
+    type: string
+    nullable: true
+    pattern: '^(?:[01]\d|2[0-3]):[0-5]\d$'
+    description: Hora local explícita, o `null` cuando solo se indicó el día.
+    example: '18:30'

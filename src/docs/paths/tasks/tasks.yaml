@@ -1,0 +1,113 @@
+get:
+  tags: [Tareas]
+  operationId: findAllTasks
+  summary: Listar las tareas del usuario
+  description: |
+    Devuelve todas las tareas y subtareas visibles del usuario de la sesión,
+    incluidas las completadas y canceladas. La lista es plana, sin paginación,
+    ordenada por creación ascendente y por UUID en caso de empate. Si no hay
+    tareas visibles devuelve `[]`. Excluye las eliminadas lógicamente y las de
+    otros usuarios. No requiere `Origin` para esta consulta.
+  security:
+    - sessionCookie: []
+  responses:
+    '200':
+      description: Lista de tareas visibles, sin campos internos de persistencia.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: ../../components/schemas/tasks/task.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+post:
+  tags: [Tareas]
+  operationId: createTask
+  summary: Crear una tarea o subtarea
+  description: |
+    Crea una tarea en `PENDING` para el usuario de la sesión. Para crear una
+    subtarea se envía `parentUuid` de una principal visible del mismo usuario.
+    Solo hay un nivel de subtareas y no se admiten nuevas subtareas de tareas
+    completadas o canceladas. La tarea nueva no cambia el estado de la principal.
+
+    Interpreta las fechas en `Europe/Madrid` y conserva si se indicó una hora.
+    El recordatorio puede tener fecha propia aunque no haya inicio ni fin;
+    esta operación solo guarda los datos y todavía no programa ni envía avisos.
+    La validación de la principal y la creación comparten una transacción.
+  security:
+    - sessionCookie: []
+  parameters:
+    - $ref: ../../components/parameters/origin.yaml
+    - $ref: ../../components/parameters/referer.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/tasks/create-task.yaml
+  responses:
+    '201':
+      description: Tarea creada en estado pendiente.
+      headers:
+        Cache-Control:
+          description: La respuesta no se almacena en caché.
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/tasks/task.yaml
+    '400':
+      description: Cuerpo inválido, propiedades desconocidas, fechas inválidas o fin anterior al inicio.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '401':
+      description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '403':
+      description: Faltan Origin y Referer, o el origen recibido no coincide con APP_ORIGIN.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '404':
+      description: La principal no existe, está eliminada lógicamente o pertenece a otro usuario.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '409':
+      description: La principal es una subtarea, está completada o cancelada, o existe un conflicto concurrente.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
+    '500':
+      description: Error inesperado. La respuesta no expone datos internos de la base de datos.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml

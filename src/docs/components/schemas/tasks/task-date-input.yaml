@@ -1,0 +1,12 @@
+type: string
+nullable: true
+pattern: '^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d)?$'
+description: |
+  Fecha local en `YYYY-MM-DD` o fecha con hora en `YYYY-MM-DDTHH:mm`,
+  interpretada en `Europe/Madrid`. Debe ser una fecha real del calendario.
+  No acepta segundos, sufijo `Z` ni desplazamiento UTC. Las horas inexistentes
+  durante el cambio al horario de verano se rechazan al persistir la tarea.
+  Omitir la hora conserva una fecha sin hora; escribir `00:00` conserva una
+  medianoche explícita. Se permiten fechas pasadas. `null` representa la
+  ausencia de fecha.
+example: '2026-10-15T18:30'

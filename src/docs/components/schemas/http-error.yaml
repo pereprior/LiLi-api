@@ -1,0 +1,21 @@
+type: object
+required:
+  - statusCode
+  - message
+properties:
+  statusCode:
+    type: integer
+    description: Código HTTP de la respuesta.
+  message:
+    description: Motivo del rechazo; la validación de DTOs puede devolver una lista de mensajes.
+    oneOf:
+      - type: string
+      - type: array
+        items:
+          type: string
+  error:
+    type: string
+    description: Nombre del error cuando lo incluye una excepción de NestJS. Las excepciones del dominio de tasks no incluyen este campo.
+example:
+  statusCode: 404
+  message: Task not found.

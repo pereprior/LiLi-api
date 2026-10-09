@@ -1,0 +1,62 @@
+type: object
+description: |
+  Respuesta pública de una tarea o subtarea. Las fechas se representan como
+  objetos de día y hora local; la entrada de creación o edición utiliza
+  cadenas. No contiene los campos internos de persistencia o archivado.
+  `parentUuid` indica la relación con la principal. No hay una colección
+  anidada de subtareas: la lista de tareas es plana.
+
+required:
+  - uuid
+  - userUuid
+  - parentUuid
+  - name
+  - description
+  - status
+  - start
+  - end
+  - reminder
+properties:
+  uuid:
+    type: string
+    format: uuid
+    description: Identificador estable de la tarea.
+  userUuid:
+    type: string
+    format: uuid
+    description: Usuario propietario de la tarea.
+  parentUuid:
+    type: string
+    format: uuid
+    nullable: true
+    description: UUID de la principal si es una subtarea; `null` si es una principal.
+  name:
+    type: string
+    description: Nombre guardado sin espacios iniciales ni finales.
+  description:
+    type: string
+    nullable: true
+    description: Descripción de la tarea, o `null` si no se ha indicado.
+  status:
+    $ref: ./task-status.yaml
+  start:
+    $ref: ./task-date.yaml
+  end:
+    $ref: ./task-date.yaml
+  reminder:
+    $ref: ./task-date.yaml
+
+example:
+  uuid: 91879373-16a2-47ea-9baa-40e15fef2ad1
+  userUuid: aefaa1c3-9683-48f8-8c20-480430ec22a5
+  parentUuid: null
+  name: Comprar comida
+  description: Revisar lo que queda en la despensa.
+  status: PENDING
+  start:
+    date: '2026-10-15'
+    time: null
+  end:
+    date: '2026-10-16'
+    time: '18:30'
+  reminder: null

@@ -9,9 +9,11 @@ import { FindAllTasksService } from '#src/tasks/services/find-all-tasks/find-all
 import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
 import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
+import { TasksController } from '#src/tasks/tasks.controller.js';
 
 @Module({
   imports: [DatabaseModule],
+  controllers: [TasksController],
   providers: [
     CreateTaskService,
     FindTaskByUuidService,

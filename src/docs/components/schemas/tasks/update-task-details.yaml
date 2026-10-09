@@ -1,0 +1,38 @@
+type: object
+additionalProperties: false
+description: |
+  Cuerpo de `PATCH /tasks/{uuid}` para editar parcialmente una tarea
+  visible del usuario. Cada campo omitido conserva su valor actual. Un objeto
+  vacío se admite, pero también se comprueba que la tarea sea editable.
+  `null` elimina la descripción o una fecha; el nombre no admite `null`.
+  El propietario, la principal y el estado no se modifican con esta operación.
+
+  Se valida el intervalo resultante combinando los cambios con las fechas
+  actuales. Si falta una hora, en un mismo día solo se comparan los días.
+  Una tarea `SCHEDULED` no puede quedarse sin inicio. Las tareas completadas o
+  canceladas no admiten edición de detalles. Las comprobaciones y la escritura
+  comparten una transacción; si fallan, no se guarda ningún cambio.
+
+  Errores del dominio: 400 para fechas inválidas, intervalo invertido o
+  inicio ausente en una tarea programada; 404 para una tarea no visible; 409
+  para una tarea terminal o conflicto concurrente; 500 para fallos inesperados.
+properties:
+  name:
+    type: string
+    minLength: 1
+    pattern: '\S'
+    description: Nuevo nombre con algún carácter distinto de espacios. Se recortan los espacios iniciales y finales; `null` no se admite.
+    example: Comprar comida para la semana
+  description:
+    type: string
+    nullable: true
+    description: Nueva descripción, o `null` para eliminarla. La cadena vacía se admite.
+  start:
+    $ref: ./task-date-input.yaml
+  end:
+    $ref: ./task-date-input.yaml
+  reminder:
+    $ref: ./task-date-input.yaml
+example:
+  name: Comprar comida para la semana
+  reminder: null

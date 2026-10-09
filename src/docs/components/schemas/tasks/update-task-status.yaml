@@ -1,0 +1,27 @@
+type: object
+additionalProperties: false
+description: |
+  Cuerpo de `PATCH /tasks/{uuid}/status`. Cambia manualmente el estado de una
+  tarea visible del usuario, respetando las reglas de `TaskStatus`.
+  Para programarla necesita su propia fecha de inicio.
+
+  Cambiar una principal a `COMPLETED` exige que todas sus subtareas visibles
+  ya estén completadas o canceladas; no las completa automáticamente.
+  Cancelar una principal cancela también sus subtareas visibles, salvo que
+  alguna esté completada: en ese caso se rechaza toda la operación porque
+  una subtarea completada es inmutable. Las subtareas ya canceladas o
+  eliminadas lógicamente conservan sus datos. Los demás cambios de estado de
+  la principal se rechazan si sus subtareas son incompatibles con el destino.
+  Cambiar el estado de una subtarea no cambia automáticamente el de su principal.
+  Todas las comprobaciones y actualizaciones se realizan en una transacción.
+
+  Errores del dominio: 400 al programar sin inicio; 404 si la tarea o su
+  principal no son visibles; 409 para cambios incompatibles, cambios desde un
+  estado terminal o conflictos concurrentes; 500 para fallos inesperados.
+required:
+  - status
+properties:
+  status:
+    $ref: ./task-status.yaml
+example:
+  status: IN_PROGRESS
