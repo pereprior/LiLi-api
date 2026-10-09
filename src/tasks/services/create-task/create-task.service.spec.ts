@@ -9,13 +9,12 @@ import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exce
 import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { CreateTaskService } from '#src/tasks/services/create-task/create-task.service.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 
 describe('CreateTaskService', () => {
   let module: TestingModule;
   let service: CreateTaskService;
   const create = vi.fn<TaskRepository['create']>();
-  const findTaskByUuid = vi.fn<FindTaskByUuidService['execute']>();
+  const findTaskByUuid = vi.fn<TaskRepository['findByUuid']>();
 
   beforeEach(async () => {
     create.mockReset();
@@ -23,10 +22,15 @@ describe('CreateTaskService', () => {
     module = await Test.createTestingModule({
       providers: [
         CreateTaskService,
-        { provide: TaskRepository, useValue: { create } },
         {
-          provide: FindTaskByUuidService,
-          useValue: { execute: findTaskByUuid },
+          provide: TaskRepository,
+          useValue: {
+            findByUuid: findTaskByUuid,
+            create,
+            transaction: <T>(
+              operation: (repository: TaskRepository) => Promise<T>,
+            ): Promise<T> => operation(module.get(TaskRepository)),
+          },
         },
       ],
     }).compile();
@@ -223,10 +227,8 @@ describe('CreateTaskService', () => {
         );
 
         expect(findTaskByUuid).toHaveBeenCalledExactlyOnceWith(
-          { uuid: 'user-1' },
-          {
-            uuid: parentUuid,
-          },
+          'user-1',
+          parentUuid,
         );
         expect(create).toHaveBeenCalledExactlyOnceWith({
           userUuid: 'user-1',
@@ -355,6 +357,21 @@ describe('CreateTaskService', () => {
       );
 
       await expect(result).rejects.toThrow(new TaskException());
+      expect(create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Missing records', () => {
+    it('rejects a missing parent without modifying persistence', async () => {
+      findTaskByUuid.mockResolvedValue(null);
+
+      await expect(
+        service.execute(
+          { uuid: 'user-1' },
+          { name: 'Groceries', parentUuid: 'parent-1' },
+        ),
+      ).rejects.toThrow(new TaskNotFoundException());
+
       expect(create).not.toHaveBeenCalled();
     });
   });

@@ -6,19 +6,16 @@ import type { CreateTaskDto } from '#src/tasks/dto/create-task.dto.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
+import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskDateMapper } from '#src/tasks/mappers/task-date.mapper.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 import { TaskDateUtils } from '#src/tasks/utils/task-date.utils.js';
 
 @Injectable()
 export class CreateTaskService {
   private readonly logger = new AppLogger('CreateTaskService');
 
-  constructor(
-    private readonly taskRepository: TaskRepository,
-    private readonly findTaskByUuid: FindTaskByUuidService,
-  ) {}
+  constructor(private readonly taskRepository: TaskRepository) {}
 
   async execute(
     userUuidDto: ParamUuidDto,
@@ -30,25 +27,46 @@ export class CreateTaskService {
     });
 
     try {
-      const start = TaskDateMapper.fromString(dto.start ?? null);
-      const end = TaskDateMapper.fromString(dto.end ?? null);
-      const reminder = TaskDateMapper.fromString(dto.reminder ?? null);
+      const task = await this.taskRepository.transaction(async (repository) => {
+        const start = TaskDateMapper.fromString(dto.start ?? null);
+        const end = TaskDateMapper.fromString(dto.end ?? null);
+        const reminder = TaskDateMapper.fromString(dto.reminder ?? null);
 
-      TaskDateUtils.validateDateRange(start, end);
+        TaskDateUtils.validateDateRange(start, end);
 
-      if (dto.parentUuid !== undefined && dto.parentUuid !== null) {
-        await this.validateParent(userUuidDto, dto.parentUuid);
-      }
+        if (dto.parentUuid !== undefined && dto.parentUuid !== null) {
+          const parent = await repository.findByUuid(
+            userUuidDto.uuid,
+            dto.parentUuid,
+          );
 
-      const task = await this.taskRepository.create({
-        userUuid: userUuidDto.uuid,
-        parentUuid: dto.parentUuid ?? null,
-        name: dto.name.trim(),
-        description: dto.description ?? null,
-        status: 'PENDING',
-        start,
-        end,
-        reminder,
+          if (parent === null) throw new TaskNotFoundException();
+
+          if (parent.parentUuid !== null) {
+            throw new TaskConflictException(
+              'Subtasks cannot have their own subtasks.',
+            );
+          }
+
+          if (parent.status === 'COMPLETED' || parent.status === 'CANCELLED') {
+            throw new TaskConflictException(
+              'Completed and cancelled tasks cannot receive new subtasks.',
+            );
+          }
+        }
+
+        const task = await repository.create({
+          userUuid: userUuidDto.uuid,
+          parentUuid: dto.parentUuid ?? null,
+          name: dto.name.trim(),
+          description: dto.description ?? null,
+          status: 'PENDING',
+          start,
+          end,
+          reminder,
+        });
+
+        return task;
       });
 
       this.logger.log('Successfully created task.', {
@@ -84,27 +102,6 @@ export class CreateTaskService {
         errorType: error instanceof Error ? error.name : typeof error,
       });
       throw new TaskException();
-    }
-  }
-
-  private async validateParent(
-    userUuidDto: ParamUuidDto,
-    parentUuid: string,
-  ): Promise<void> {
-    const parent = await this.findTaskByUuid.execute(userUuidDto, {
-      uuid: parentUuid,
-    });
-
-    if (parent.parentUuid !== null) {
-      throw new TaskConflictException(
-        'Subtasks cannot have their own subtasks.',
-      );
-    }
-
-    if (parent.status === 'COMPLETED' || parent.status === 'CANCELLED') {
-      throw new TaskConflictException(
-        'Completed and cancelled tasks cannot receive new subtasks.',
-      );
     }
   }
 }

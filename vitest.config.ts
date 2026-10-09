@@ -19,11 +19,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: [
-        'src/**/*.spec.ts',
-        'src/**/types/**',
-        'src/auth/google-login/oidc/clients/google-oidc.client.ts',
-      ],
+      exclude: ['src/main.ts', 'src/**/*.spec.ts', 'src/**/types/**'],
       reporter: ['text', 'html', 'lcovonly'],
       reportsDirectory: './coverage',
       thresholds: {

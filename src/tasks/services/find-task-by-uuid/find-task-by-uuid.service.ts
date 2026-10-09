@@ -27,6 +27,7 @@ export class FindTaskByUuidService {
         userUuidDto.uuid,
         uuidDto.uuid,
       );
+
       if (task === null) throw new TaskNotFoundException();
 
       this.logger.log('Successfully found task.', {

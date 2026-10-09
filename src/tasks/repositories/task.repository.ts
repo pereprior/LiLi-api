@@ -3,6 +3,10 @@ import type { CreateTaskData } from '#src/tasks/types/data/create-task.data.js';
 import type { UpdateTaskData } from '#src/tasks/types/data/update-task.data.js';
 
 export abstract class TaskRepository {
+  abstract transaction<T>(
+    operation: (repository: TaskRepository) => Promise<T>,
+  ): Promise<T>;
+
   abstract create(data: CreateTaskData): Promise<TaskEntity>;
 
   abstract findAll(userUuid: string): Promise<TaskEntity[]>;
@@ -12,6 +16,11 @@ export abstract class TaskRepository {
     uuid: string,
   ): Promise<TaskEntity | null>;
 
+  abstract findSubtasks(
+    userUuid: string,
+    parentUuid: string,
+  ): Promise<TaskEntity[]>;
+
   abstract update(
     userUuid: string,
     uuid: string,
@@ -19,4 +28,6 @@ export abstract class TaskRepository {
   ): Promise<TaskEntity>;
 
   abstract delete(userUuid: string, uuid: string): Promise<void>;
+
+  abstract softDelete(userUuid: string, uuid: string): Promise<void>;
 }

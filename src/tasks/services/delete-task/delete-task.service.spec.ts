@@ -6,22 +6,32 @@ import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { DeleteTaskService } from '#src/tasks/services/delete-task/delete-task.service.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 
 describe('DeleteTaskService', () => {
   let module: TestingModule;
   let service: DeleteTaskService;
   const removeTask = vi.fn<TaskRepository['delete']>();
-  const findTask = vi.fn<FindTaskByUuidService['execute']>();
+  const findTask = vi.fn<TaskRepository['findByUuid']>();
+  const softDelete = vi.fn<TaskRepository['softDelete']>();
 
   beforeEach(async () => {
     removeTask.mockReset();
+    softDelete.mockReset();
     findTask.mockReset();
     module = await Test.createTestingModule({
       providers: [
         DeleteTaskService,
-        { provide: TaskRepository, useValue: { delete: removeTask } },
-        { provide: FindTaskByUuidService, useValue: { execute: findTask } },
+        {
+          provide: TaskRepository,
+          useValue: {
+            findByUuid: findTask,
+            delete: removeTask,
+            softDelete,
+            transaction: <T>(
+              operation: (repository: TaskRepository) => Promise<T>,
+            ): Promise<T> => operation(module.get(TaskRepository)),
+          },
+        },
       ],
     }).compile();
     service = module.get(DeleteTaskService);
@@ -54,12 +64,7 @@ describe('DeleteTaskService', () => {
       );
 
       expect(result).toEqual({ success: true });
-      expect(findTask).toHaveBeenCalledExactlyOnceWith(
-        { uuid: 'user-1' },
-        {
-          uuid: 'task-1',
-        },
-      );
+      expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
       expect(removeTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
     });
 
@@ -152,5 +157,54 @@ describe('DeleteTaskService', () => {
     await expect(
       service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
     ).rejects.toThrow(new TaskException());
+  });
+
+  describe('Deletion mode', () => {
+    it.each([
+      'SCHEDULED',
+      'IN_PROGRESS',
+      'PAUSED',
+      'BLOCKED',
+      'COMPLETED',
+      'CANCELLED',
+    ] as const)('soft-deletes a %s task', async (status) => {
+      findTask.mockResolvedValue(
+        new TaskEntity(
+          'task-1',
+          'user-1',
+          null,
+          'Dinner',
+          null,
+          status,
+          null,
+          null,
+          null,
+          null,
+        ),
+      );
+      softDelete.mockResolvedValue(undefined);
+
+      const result = await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(softDelete).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
+      expect(removeTask).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Missing records', () => {
+    it('rejects a missing task without modifying persistence', async () => {
+      findTask.mockResolvedValue(null);
+
+      await expect(
+        service.execute({ uuid: 'user-1' }, { uuid: 'task-1' }),
+      ).rejects.toThrow(new TaskNotFoundException());
+
+      expect(removeTask).not.toHaveBeenCalled();
+      expect(softDelete).not.toHaveBeenCalled();
+    });
   });
 });

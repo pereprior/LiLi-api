@@ -5,17 +5,16 @@ import { AppLogger } from '#src/shared/logging/app-logger.js';
 import type { ChangeTaskStatusDto } from '#src/tasks/dto/change-task-status.dto.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
+import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
+import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
+import { TaskStateRulesUtils } from '#src/tasks/utils/task-state-rules.utils.js';
 
 @Injectable()
 export class UpdateTaskStatusService {
   private readonly logger = new AppLogger('UpdateTaskStatusService');
 
-  constructor(
-    private readonly taskRepository: TaskRepository,
-    private readonly findTaskByUuid: FindTaskByUuidService,
-  ) {}
+  constructor(private readonly taskRepository: TaskRepository) {}
 
   async execute(
     userUuidDto: ParamUuidDto,
@@ -29,23 +28,81 @@ export class UpdateTaskStatusService {
     });
 
     try {
-      const task = await this.findTaskByUuid.execute(userUuidDto, uuidDto);
+      const result = await this.taskRepository.transaction(
+        async (repository) => {
+          const task = await repository.findByUuid(
+            userUuidDto.uuid,
+            uuidDto.uuid,
+          );
 
-      const updated = await this.taskRepository.update(
-        userUuidDto.uuid,
-        uuidDto.uuid,
-        {
-          status: dto.status,
+          if (task === null) throw new TaskNotFoundException();
+          if (dto.status === task.status)
+            return { task, previousStatus: task.status };
+
+          TaskStateRulesUtils.assertEditable(task);
+          TaskStateRulesUtils.validateScheduledStart(dto.status, task.start);
+
+          if (task.parentUuid !== null) {
+            const parent = await repository.findByUuid(
+              userUuidDto.uuid,
+              task.parentUuid,
+            );
+
+            if (parent === null) throw new TaskNotFoundException();
+
+            TaskStateRulesUtils.validateSubtaskStatus(
+              parent.status,
+              dto.status,
+            );
+          } else {
+            const subtasks = await repository.findSubtasks(
+              userUuidDto.uuid,
+              task.uuid,
+            );
+
+            if (dto.status === 'CANCELLED') {
+              if (subtasks.some((subtask) => subtask.status === 'COMPLETED')) {
+                throw new TaskConflictException(
+                  'Tasks with completed subtasks cannot be cancelled.',
+                );
+              }
+              for (const subtask of subtasks) {
+                if (subtask.status !== 'CANCELLED') {
+                  await repository.update(userUuidDto.uuid, subtask.uuid, {
+                    status: 'CANCELLED',
+                  });
+                }
+              }
+            } else {
+              for (const subtask of subtasks) {
+                TaskStateRulesUtils.validateSubtaskStatus(
+                  dto.status,
+                  subtask.status,
+                );
+              }
+            }
+          }
+
+          const updated = await repository.update(
+            userUuidDto.uuid,
+            uuidDto.uuid,
+            {
+              status: dto.status,
+            },
+          );
+
+          return { task: updated, previousStatus: task.status };
         },
       );
 
       this.logger.log('Successfully updated task status.', {
         userUuid: userUuidDto.uuid,
         taskUuid: uuidDto.uuid,
-        previousStatus: task.status,
-        status: updated.status,
+        previousStatus: result.previousStatus,
+        status: result.task.status,
       });
-      return updated;
+
+      return result.task;
     } catch (error) {
       if (error instanceof TaskException) {
         if (error.getStatus() < 500) {

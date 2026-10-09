@@ -4,17 +4,14 @@ import type { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
 import { AppLogger } from '#src/shared/logging/app-logger.js';
 import { DeleteResponse } from '#src/shared/responses/delete.response.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
+import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 
 @Injectable()
 export class DeleteTaskService {
   private readonly logger = new AppLogger('DeleteTaskService');
 
-  constructor(
-    private readonly taskRepository: TaskRepository,
-    private readonly findTaskByUuid: FindTaskByUuidService,
-  ) {}
+  constructor(private readonly taskRepository: TaskRepository) {}
 
   async execute(
     userUuidDto: ParamUuidDto,
@@ -26,9 +23,20 @@ export class DeleteTaskService {
     });
 
     try {
-      await this.findTaskByUuid.execute(userUuidDto, uuidDto);
+      await this.taskRepository.transaction(async (repository) => {
+        const task = await repository.findByUuid(
+          userUuidDto.uuid,
+          uuidDto.uuid,
+        );
 
-      await this.taskRepository.delete(userUuidDto.uuid, uuidDto.uuid);
+        if (task === null) throw new TaskNotFoundException();
+
+        if (task.status === 'PENDING') {
+          await repository.delete(userUuidDto.uuid, uuidDto.uuid);
+        } else {
+          await repository.softDelete(userUuidDto.uuid, uuidDto.uuid);
+        }
+      });
 
       this.logger.log('Successfully deleted task.', {
         userUuid: userUuidDto.uuid,

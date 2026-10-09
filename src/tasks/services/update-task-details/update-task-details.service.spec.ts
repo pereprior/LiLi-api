@@ -4,17 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskDateEntity } from '#src/tasks/entities/task-date.entity.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
+import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
 
 describe('UpdateTaskDetailsService', () => {
   let module: TestingModule;
   let service: UpdateTaskDetailsService;
   const update = vi.fn<TaskRepository['update']>();
-  const findTask = vi.fn<FindTaskByUuidService['execute']>();
+  const findTask = vi.fn<TaskRepository['findByUuid']>();
 
   beforeEach(async () => {
     update.mockReset();
@@ -22,8 +22,16 @@ describe('UpdateTaskDetailsService', () => {
     module = await Test.createTestingModule({
       providers: [
         UpdateTaskDetailsService,
-        { provide: TaskRepository, useValue: { update } },
-        { provide: FindTaskByUuidService, useValue: { execute: findTask } },
+        {
+          provide: TaskRepository,
+          useValue: {
+            findByUuid: findTask,
+            update,
+            transaction: <T>(
+              operation: (repository: TaskRepository) => Promise<T>,
+            ): Promise<T> => operation(module.get(TaskRepository)),
+          },
+        },
       ],
     }).compile();
     service = module.get(UpdateTaskDetailsService);
@@ -59,12 +67,7 @@ describe('UpdateTaskDetailsService', () => {
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
         name: 'Dinner',
       });
-      expect(findTask).toHaveBeenCalledExactlyOnceWith(
-        { uuid: 'user-1' },
-        {
-          uuid: 'task-1',
-        },
-      );
+      expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
     });
 
     it('returns the persisted task', async () => {
@@ -362,6 +365,85 @@ describe('UpdateTaskDetailsService', () => {
           { name: 'Dinner' },
         ),
       ).rejects.toThrow(new TaskException());
+    });
+  });
+
+  describe('State restrictions', () => {
+    it.each(['COMPLETED', 'CANCELLED'] as const)(
+      'rejects detail edits on a %s task',
+      async (status) => {
+        findTask.mockResolvedValue(
+          new TaskEntity(
+            'task-1',
+            'user-1',
+            null,
+            'Dinner',
+            null,
+            status,
+            null,
+            null,
+            null,
+            null,
+          ),
+        );
+
+        const result = service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Changed' },
+        );
+
+        await expect(result).rejects.toThrow(
+          new TaskConflictException(
+            'Completed and cancelled tasks are immutable.',
+          ),
+        );
+        expect(update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects clearing the start of a scheduled task', async () => {
+      findTask.mockResolvedValue(
+        new TaskEntity(
+          'task-1',
+          'user-1',
+          null,
+          'Dinner',
+          null,
+          'SCHEDULED',
+          new TaskDateEntity('2026-10-10'),
+          null,
+          null,
+          null,
+        ),
+      );
+
+      const result = service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { start: null },
+      );
+
+      await expect(result).rejects.toThrow(
+        new TaskValidationException('Scheduled tasks require a start date.'),
+      );
+      expect(update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Missing records', () => {
+    it('rejects a missing task without modifying persistence', async () => {
+      findTask.mockResolvedValue(null);
+
+      await expect(
+        service.execute(
+          { uuid: 'user-1' },
+          { uuid: 'task-1' },
+          { name: 'Groceries' },
+        ),
+      ).rejects.toThrow(new TaskNotFoundException());
+
+      expect(update).not.toHaveBeenCalled();
     });
   });
 });
