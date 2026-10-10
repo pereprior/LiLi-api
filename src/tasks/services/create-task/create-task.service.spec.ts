@@ -9,6 +9,8 @@ import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exce
 import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { CreateTaskService } from '#src/tasks/services/create-task/create-task.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('CreateTaskService', () => {
   let module: TestingModule;
@@ -49,7 +51,8 @@ describe('CreateTaskService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -64,13 +67,55 @@ describe('CreateTaskService', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: null,
         end: null,
         reminder: null,
       });
       expect(findTaskByUuid).not.toHaveBeenCalled();
     });
+
+    it.each([
+      TaskPriority.LOW,
+      TaskPriority.MEDIUM,
+      TaskPriority.HIGH,
+    ] as const)(
+      'passes an explicit %s priority to persistence',
+      async (priority) => {
+        const task = new TaskEntity(
+          'task-1',
+          'user-1',
+          null,
+          'Groceries',
+          null,
+          TaskStatus.PENDING,
+          priority,
+          null,
+          null,
+          null,
+          null,
+        );
+        create.mockResolvedValue(task);
+
+        await service.execute(
+          { uuid: 'user-1' },
+          { name: 'Groceries', priority },
+        );
+
+        expect(create).toHaveBeenCalledExactlyOnceWith({
+          userUuid: 'user-1',
+          parentUuid: null,
+          name: 'Groceries',
+          description: null,
+          status: TaskStatus.PENDING,
+          priority,
+          start: null,
+          end: null,
+          reminder: null,
+        });
+      },
+    );
 
     it('returns the entity supplied by persistence', async () => {
       const task = new TaskEntity(
@@ -79,7 +124,8 @@ describe('CreateTaskService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -102,7 +148,8 @@ describe('CreateTaskService', () => {
         null,
         'Groceries',
         'Buy vegetables',
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-07-10'),
         new TaskDateEntity('2026-07-11', '00:00'),
         new TaskDateEntity('2026-07-09', '06:00'),
@@ -126,7 +173,8 @@ describe('CreateTaskService', () => {
         parentUuid: null,
         name: 'Groceries',
         description: 'Buy vegetables',
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: new TaskDateEntity('2026-07-10'),
         end: new TaskDateEntity('2026-07-11', '00:00'),
         reminder: new TaskDateEntity('2026-07-09', '06:00'),
@@ -165,7 +213,8 @@ describe('CreateTaskService', () => {
           null,
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -185,11 +234,11 @@ describe('CreateTaskService', () => {
 
   describe('Subtask creation', () => {
     it.each([
-      'PENDING',
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
+      TaskStatus.PENDING,
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
     ] as const)(
       'creates a pending subtask under a %s principal',
       async (status) => {
@@ -201,6 +250,7 @@ describe('CreateTaskService', () => {
           'Dinner',
           null,
           status,
+          TaskPriority.MEDIUM,
           new TaskDateEntity('2026-07-10'),
           null,
           null,
@@ -213,7 +263,8 @@ describe('CreateTaskService', () => {
           parentUuid,
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -235,7 +286,8 @@ describe('CreateTaskService', () => {
           parentUuid,
           name: 'Groceries',
           description: null,
-          status: 'PENDING',
+          status: TaskStatus.PENDING,
+          priority: TaskPriority.MEDIUM,
           start: null,
           end: null,
           reminder: null,
@@ -268,7 +320,8 @@ describe('CreateTaskService', () => {
           'principal-uuid',
           'Dinner',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -290,7 +343,7 @@ describe('CreateTaskService', () => {
       expect(create).not.toHaveBeenCalled();
     });
 
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'rejects adding a subtask to a %s principal',
       async (status) => {
         const parentUuid = '00000000-0000-4000-8000-000000000001';
@@ -302,6 +355,7 @@ describe('CreateTaskService', () => {
             'Dinner',
             null,
             status,
+            TaskPriority.MEDIUM,
             null,
             null,
             null,

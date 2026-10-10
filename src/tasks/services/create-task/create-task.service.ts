@@ -9,6 +9,8 @@ import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.excep
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskDateMapper } from '#src/tasks/mappers/task-date.mapper.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 import { TaskDateUtils } from '#src/tasks/utils/task-date.utils.js';
 
 @Injectable()
@@ -48,7 +50,10 @@ export class CreateTaskService {
             );
           }
 
-          if (parent.status === 'COMPLETED' || parent.status === 'CANCELLED') {
+          if (
+            parent.status === TaskStatus.COMPLETED ||
+            parent.status === TaskStatus.CANCELLED
+          ) {
             throw new TaskConflictException(
               'Completed and cancelled tasks cannot receive new subtasks.',
             );
@@ -60,7 +65,8 @@ export class CreateTaskService {
           parentUuid: dto.parentUuid ?? null,
           name: dto.name.trim(),
           description: dto.description ?? null,
-          status: 'PENDING',
+          status: TaskStatus.PENDING,
+          priority: dto.priority ?? TaskPriority.MEDIUM,
           start,
           end,
           reminder,

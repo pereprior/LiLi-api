@@ -4,6 +4,8 @@ import { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskDateMapper } from '#src/tasks/mappers/task-date.mapper.js';
 import type { CreateTaskData } from '#src/tasks/types/data/create-task.data.js';
 import type { UpdateTaskData } from '#src/tasks/types/data/update-task.data.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 export class TaskMapper {
   static toEntity(task: Task): TaskEntity {
@@ -13,7 +15,8 @@ export class TaskMapper {
       task.parentUuid,
       task.name,
       task.description,
-      task.status,
+      TaskStatus[task.status],
+      TaskPriority[task.priority],
       TaskDateMapper.fromData({
         date: task.startDate,
         hasTime: task.startHasTime,
@@ -44,7 +47,8 @@ export class TaskMapper {
       parentUuid: data.parentUuid ?? null,
       name: data.name,
       description: data.description ?? null,
-      status: data.status ?? 'PENDING',
+      status: data.status ?? TaskStatus.PENDING,
+      priority: data.priority ?? TaskPriority.MEDIUM,
       startDate: start.date,
       startHasTime: start.hasTime,
       endDate: end.date,
@@ -60,6 +64,7 @@ export class TaskMapper {
     if (data.name !== undefined) input.name = data.name;
     if (data.description !== undefined) input.description = data.description;
     if (data.status !== undefined) input.status = data.status;
+    if (data.priority !== undefined) input.priority = data.priority;
     if (data.deletedAt !== undefined) input.deletedAt = data.deletedAt;
 
     if (data.start !== undefined) {

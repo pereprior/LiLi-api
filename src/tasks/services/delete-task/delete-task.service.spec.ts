@@ -6,6 +6,8 @@ import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { DeleteTaskService } from '#src/tasks/services/delete-task/delete-task.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('DeleteTaskService', () => {
   let module: TestingModule;
@@ -49,7 +51,8 @@ describe('DeleteTaskService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -75,7 +78,8 @@ describe('DeleteTaskService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -122,7 +126,8 @@ describe('DeleteTaskService', () => {
       null,
       'Groceries',
       null,
-      'PENDING',
+      TaskStatus.PENDING,
+      TaskPriority.MEDIUM,
       null,
       null,
       null,
@@ -144,7 +149,8 @@ describe('DeleteTaskService', () => {
       null,
       'Groceries',
       null,
-      'PENDING',
+      TaskStatus.PENDING,
+      TaskPriority.MEDIUM,
       null,
       null,
       null,
@@ -161,12 +167,12 @@ describe('DeleteTaskService', () => {
 
   describe('Deletion mode', () => {
     it.each([
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
-      'COMPLETED',
-      'CANCELLED',
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
     ] as const)('soft-deletes a %s task', async (status) => {
       findTask.mockResolvedValue(
         new TaskEntity(
@@ -176,6 +182,7 @@ describe('DeleteTaskService', () => {
           'Dinner',
           null,
           status,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,

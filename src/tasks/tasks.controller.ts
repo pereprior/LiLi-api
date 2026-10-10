@@ -13,9 +13,9 @@ import { Authenticated } from '#src/auth/decorators/authenticated-session.decora
 import type { AuthenticatedSession } from '#src/auth/types/authenticated-session.type.js';
 import { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
 import type { DeleteResponse } from '#src/shared/responses/delete.response.js';
-import { ChangeTaskStatusDto } from '#src/tasks/dto/change-task-status.dto.js';
 import { CreateTaskDto } from '#src/tasks/dto/create-task.dto.js';
 import { UpdateTaskDetailsDto } from '#src/tasks/dto/update-task-details.dto.js';
+import { UpdateTaskStatusDto } from '#src/tasks/dto/update-task-status.dto.js';
 import { TaskResponseMapper } from '#src/tasks/mappers/task-response.mapper.js';
 import type { TaskResponse } from '#src/tasks/responses/task.response.js';
 import { CreateTaskService } from '#src/tasks/services/create-task/create-task.service.js';
@@ -91,7 +91,7 @@ export class TasksController {
   async updateStatus(
     @Authenticated() session: AuthenticatedSession,
     @Param() uuidDto: ParamUuidDto,
-    @Body() dto: ChangeTaskStatusDto,
+    @Body() dto: UpdateTaskStatusDto,
   ): Promise<TaskResponse> {
     const task = await this.updateTaskStatus.execute(
       { uuid: session.user.uuid },

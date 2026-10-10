@@ -9,6 +9,8 @@ import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exce
 import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('UpdateTaskDetailsService', () => {
   let module: TestingModule;
@@ -42,6 +44,38 @@ describe('UpdateTaskDetailsService', () => {
   });
 
   describe('Partial updates', () => {
+    it.each([
+      TaskPriority.LOW,
+      TaskPriority.MEDIUM,
+      TaskPriority.HIGH,
+    ] as const)('updates only the supplied %s priority', async (priority) => {
+      const task = new TaskEntity(
+        'task-1',
+        'user-1',
+        null,
+        'Groceries',
+        null,
+        TaskStatus.PENDING,
+        TaskPriority.HIGH,
+        null,
+        null,
+        null,
+        null,
+      );
+      findTask.mockResolvedValue(task);
+      update.mockResolvedValue(task);
+
+      await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { priority },
+      );
+
+      expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
+        priority,
+      });
+    });
+
     it('trims the supplied name without sending omitted fields', async () => {
       const task = new TaskEntity(
         'task-1',
@@ -49,7 +83,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         'Weekly',
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -77,7 +112,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -89,7 +125,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Dinner',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -114,7 +151,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -149,7 +187,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         'Weekly',
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-10', null),
         new TaskDateEntity('2026-10-11', null),
         new TaskDateEntity('2026-10-09', '18:00'),
@@ -184,7 +223,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -234,7 +274,8 @@ describe('UpdateTaskDetailsService', () => {
           null,
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           start,
           end,
           null,
@@ -264,7 +305,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -323,7 +365,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -349,7 +392,8 @@ describe('UpdateTaskDetailsService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -369,7 +413,7 @@ describe('UpdateTaskDetailsService', () => {
   });
 
   describe('State restrictions', () => {
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'rejects detail edits on a %s task',
       async (status) => {
         findTask.mockResolvedValue(
@@ -380,6 +424,7 @@ describe('UpdateTaskDetailsService', () => {
             'Dinner',
             null,
             status,
+            TaskPriority.MEDIUM,
             null,
             null,
             null,
@@ -410,7 +455,8 @@ describe('UpdateTaskDetailsService', () => {
           null,
           'Dinner',
           null,
-          'SCHEDULED',
+          TaskStatus.SCHEDULED,
+          TaskPriority.MEDIUM,
           new TaskDateEntity('2026-10-10'),
           null,
           null,

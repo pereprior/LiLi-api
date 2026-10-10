@@ -6,6 +6,7 @@ import { DeleteResponse } from '#src/shared/responses/delete.response.js';
 import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 @Injectable()
 export class DeleteTaskService {
@@ -31,7 +32,7 @@ export class DeleteTaskService {
 
         if (task === null) throw new TaskNotFoundException();
 
-        if (task.status === 'PENDING') {
+        if (task.status === TaskStatus.PENDING) {
           await repository.delete(userUuidDto.uuid, uuidDto.uuid);
         } else {
           await repository.softDelete(userUuidDto.uuid, uuidDto.uuid);

@@ -1,0 +1,10 @@
+type: string
+enum:
+  - LOW
+  - MEDIUM
+  - HIGH
+description: |
+  Prioridad de la tarea: baja (`LOW`), media (`MEDIUM`) o alta (`HIGH`).
+  Al crear una tarea, se usa `MEDIUM` si se omite. No admite `null`.
+  Cada subtarea tiene su propia prioridad, independiente de su principal.
+example: MEDIUM
