@@ -137,9 +137,13 @@ describe('TasksController', () => {
       );
       findAllTasks.mockResolvedValue([task]);
 
-      const result = await controller.findAll(session);
+      const dto = { search: 'planif' };
+      const result = await controller.findAll(session, dto);
 
-      expect(findAllTasks).toHaveBeenCalledExactlyOnceWith({ uuid: 'user-1' });
+      expect(findAllTasks).toHaveBeenCalledExactlyOnceWith(
+        { uuid: 'user-1' },
+        dto,
+      );
       expect(result).toEqual([
         {
           uuid: 'task-1',

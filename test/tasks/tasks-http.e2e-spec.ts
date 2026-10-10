@@ -1,7 +1,16 @@
 import type { INestApplication } from '@nestjs/common';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { AppModule } from '#src/app.module.js';
 import { authConfig } from '#src/auth/config/auth.config.js';
@@ -398,6 +407,448 @@ describe('Tasks HTTP', () => {
         message: 'Task not found.',
       });
       expect(await prisma.task.count({ where: { userUuid } })).toBe(0);
+    });
+  });
+
+  describe('GET /tasks organization', () => {
+    it('combines repeated states, partial name or description search, dates and ordering', async () => {
+      const other = await prisma.user.create({
+        data: { googleSubject: 'tasks-http-other', email: 'admin@example.com' },
+      });
+      await prisma.task.createMany({
+        data: [
+          {
+            userUuid,
+            name: 'Planificar tareas para LiLi',
+            status: TaskStatus.PENDING,
+            priority: TaskPriority.LOW,
+            startDate: new Date('2026-10-09T22:00:00Z'),
+          },
+          {
+            userUuid,
+            name: 'Revisar agenda',
+            description: 'PLANIFICACION semanal',
+            status: TaskStatus.SCHEDULED,
+            priority: TaskPriority.HIGH,
+            startDate: new Date('2026-10-10T21:59:00Z'),
+            startHasTime: true,
+          },
+          {
+            userUuid,
+            name: 'Planificar terminado',
+            status: TaskStatus.COMPLETED,
+            startDate: new Date('2026-10-09T22:00:00Z'),
+          },
+          {
+            userUuid,
+            name: 'Planificar mañana',
+            startDate: new Date('2026-10-10T22:00:00Z'),
+          },
+          {
+            userUuid,
+            name: 'Otra tarea',
+            startDate: new Date('2026-10-09T22:00:00Z'),
+          },
+          { userUuid, name: 'Planificar sin fecha' },
+          {
+            userUuid,
+            name: 'Planificar archivado',
+            deletedAt: new Date(),
+            startDate: new Date('2026-10-09T22:00:00Z'),
+          },
+          {
+            userUuid: other.uuid,
+            name: 'Planificar privado',
+            startDate: new Date('2026-10-09T22:00:00Z'),
+          },
+        ],
+      });
+
+      const response = await fetch(
+        new URL(
+          '/tasks?status=PENDING&status=SCHEDULED&search=%20planif%20&dateFrom=2026-10-10&dateTo=2026-10-10&sortBy=priority&sortDirection=desc',
+          baseUrl,
+        ),
+        { headers: { cookie } },
+      );
+      const tasks = (await response.json()) as TaskResponse[];
+
+      expect(response.status).toBe(200);
+      expect(tasks.map((task) => task.name)).toEqual([
+        'Revisar agenda',
+        'Planificar tareas para LiLi',
+      ]);
+    });
+
+    it('accepts a single state when searching the history', async () => {
+      await prisma.task.createMany({
+        data: [
+          {
+            userUuid,
+            name: 'Planificar terminado',
+            status: TaskStatus.COMPLETED,
+          },
+          { userUuid, name: 'Planificar pendiente' },
+        ],
+      });
+
+      const response = await fetch(
+        new URL('/tasks?status=COMPLETED&search=planif', baseUrl),
+        { headers: { cookie } },
+      );
+
+      expect(response.status).toBe(200);
+      expect(
+        ((await response.json()) as TaskResponse[]).map((task) => task.name),
+      ).toEqual(['Planificar terminado']);
+    });
+
+    it.each(['%', '_', '\\'])(
+      'searches for literal %s rather than SQL patterns',
+      async (search) => {
+        await prisma.task.createMany({
+          data: [
+            { userUuid, name: `Contains ${search}` },
+            { userUuid, name: 'Other task' },
+          ],
+        });
+        const url = new URL('/tasks', baseUrl);
+        url.searchParams.set('search', search);
+
+        const response = await fetch(url, { headers: { cookie } });
+
+        expect(response.status).toBe(200);
+        expect(
+          ((await response.json()) as TaskResponse[]).map((task) => task.name),
+        ).toEqual([`Contains ${search}`]);
+      },
+    );
+
+    it('ignores a whitespace-only search', async () => {
+      await prisma.task.create({ data: { userUuid, name: 'Any task' } });
+
+      const response = await fetch(new URL('/tasks?search=%20%20', baseUrl), {
+        headers: { cookie },
+      });
+
+      expect(response.status).toBe(200);
+      expect(
+        ((await response.json()) as TaskResponse[]).map((task) => task.name),
+      ).toEqual(['Any task']);
+    });
+
+    it.each([
+      ['start', 'asc', ['Earlier', 'Later', 'No date']],
+      ['start', 'desc', ['Later', 'Earlier', 'No date']],
+      ['end', 'asc', ['Earlier', 'Later', 'No date']],
+      ['end', 'desc', ['Later', 'Earlier', 'No date']],
+    ])(
+      'orders by %s %s with missing dates last',
+      async (field, direction, expected) => {
+        await prisma.task.createMany({
+          data: [
+            { userUuid, name: 'No date' },
+            {
+              userUuid,
+              name: 'Later',
+              startDate: new Date('2026-10-11T22:00:00Z'),
+              endDate: new Date('2026-10-12T22:00:00Z'),
+            },
+            {
+              userUuid,
+              name: 'Earlier',
+              startDate: new Date('2026-10-09T22:00:00Z'),
+              endDate: new Date('2026-10-10T22:00:00Z'),
+            },
+          ],
+        });
+
+        const response = await fetch(
+          new URL(`/tasks?sortBy=${field}&sortDirection=${direction}`, baseUrl),
+          { headers: { cookie } },
+        );
+
+        expect(response.status).toBe(200);
+        expect(
+          ((await response.json()) as TaskResponse[]).map((task) => task.name),
+        ).toEqual(expected);
+      },
+    );
+
+    it.each([
+      ['asc', ['LOW', 'MEDIUM', 'HIGH']],
+      ['desc', ['HIGH', 'MEDIUM', 'LOW']],
+    ])('orders all priority levels %s', async (direction, expected) => {
+      await prisma.task.createMany({
+        data: [
+          { userUuid, name: 'MEDIUM', priority: TaskPriority.MEDIUM },
+          { userUuid, name: 'HIGH', priority: TaskPriority.HIGH },
+          { userUuid, name: 'LOW', priority: TaskPriority.LOW },
+        ],
+      });
+
+      const response = await fetch(
+        new URL(`/tasks?sortBy=priority&sortDirection=${direction}`, baseUrl),
+        { headers: { cookie } },
+      );
+
+      expect(response.status).toBe(200);
+      expect(
+        ((await response.json()) as TaskResponse[]).map((task) => task.name),
+      ).toEqual(expected);
+    });
+
+    it('breaks sort ties by creation and then UUID', async () => {
+      await prisma.task.createMany({
+        data: [
+          {
+            uuid: '00000000-0000-4000-8000-000000000002',
+            userUuid,
+            name: 'Third',
+            createdAt: new Date('2026-10-10T00:00:00Z'),
+          },
+          {
+            uuid: '00000000-0000-4000-8000-000000000001',
+            userUuid,
+            name: 'Second',
+            createdAt: new Date('2026-10-10T00:00:00Z'),
+          },
+          {
+            userUuid,
+            name: 'First',
+            createdAt: new Date('2026-10-09T00:00:00Z'),
+          },
+        ],
+      });
+
+      const response = await fetch(new URL('/tasks?sortBy=priority', baseUrl), {
+        headers: { cookie },
+      });
+
+      expect(response.status).toBe(200);
+      expect(
+        ((await response.json()) as TaskResponse[]).map((task) => task.name),
+      ).toEqual(['First', 'Second', 'Third']);
+    });
+
+    it.each([
+      ['lower start bound', 'dateFrom=2026-10-11', ['Later']],
+      ['upper start bound', 'dateTo=2026-10-10', ['Earlier']],
+      [
+        'end range',
+        'dateField=end&dateFrom=2026-10-11&dateTo=2026-10-11',
+        ['Earlier'],
+      ],
+    ])('filters a %s', async (_label, query, expected) => {
+      await prisma.task.createMany({
+        data: [
+          {
+            userUuid,
+            name: 'Earlier',
+            startDate: new Date('2026-10-09T22:00:00Z'),
+            endDate: new Date('2026-10-10T22:00:00Z'),
+          },
+          {
+            userUuid,
+            name: 'Later',
+            startDate: new Date('2026-10-10T22:00:00Z'),
+            endDate: new Date('2026-10-11T22:00:00Z'),
+          },
+          { userUuid, name: 'No date' },
+        ],
+      });
+
+      const response = await fetch(new URL(`/tasks?${query}`, baseUrl), {
+        headers: { cookie },
+      });
+
+      expect(response.status).toBe(200);
+      expect(
+        ((await response.json()) as TaskResponse[]).map((task) => task.name),
+      ).toEqual(expected);
+    });
+
+    describe('Relative views', () => {
+      beforeEach(async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-10T12:00:00Z'));
+        const session = await createSession.execute(userUuid);
+        cookie = `lili_session=${session.token}`;
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it.each([
+        ['today', ['Today start', 'Today end']],
+        ['upcoming', ['Tomorrow', 'Seventh day']],
+      ])(
+        'selects the calendar boundaries for %s and excludes finished tasks',
+        async (view, expected) => {
+          await prisma.task.createMany({
+            data: [
+              {
+                userUuid,
+                name: 'Yesterday',
+                startDate: new Date('2026-10-09T21:59:00Z'),
+                startHasTime: true,
+              },
+              {
+                userUuid,
+                name: 'Today start',
+                startDate: new Date('2026-10-09T22:00:00Z'),
+              },
+              {
+                userUuid,
+                name: 'Today end',
+                startDate: new Date('2026-10-10T21:59:00Z'),
+                startHasTime: true,
+              },
+              {
+                userUuid,
+                name: 'Tomorrow',
+                startDate: new Date('2026-10-10T22:00:00Z'),
+              },
+              {
+                userUuid,
+                name: 'Seventh day',
+                startDate: new Date('2026-10-17T21:59:00Z'),
+                startHasTime: true,
+              },
+              {
+                userUuid,
+                name: 'Eighth day',
+                startDate: new Date('2026-10-17T22:00:00Z'),
+              },
+              {
+                userUuid,
+                name: 'Completed today',
+                status: TaskStatus.COMPLETED,
+                startDate: new Date('2026-10-09T22:00:00Z'),
+              },
+              {
+                userUuid,
+                name: 'Cancelled tomorrow',
+                status: TaskStatus.CANCELLED,
+                startDate: new Date('2026-10-10T22:00:00Z'),
+              },
+              { userUuid, name: 'No date' },
+            ],
+          });
+
+          const response = await fetch(
+            new URL(`/tasks?view=${view}&sortBy=start`, baseUrl),
+            { headers: { cookie } },
+          );
+
+          expect(response.status).toBe(200);
+          expect(
+            ((await response.json()) as TaskResponse[]).map(
+              (task) => task.name,
+            ),
+          ).toEqual(expected);
+        },
+      );
+
+      it('distinguishes date-only deadlines from timed deadlines while combining search', async () => {
+        await prisma.task.createMany({
+          data: [
+            {
+              userUuid,
+              name: 'Planificar yesterday',
+              endDate: new Date('2026-10-08T22:00:00Z'),
+            },
+            {
+              userUuid,
+              name: 'Planificar today',
+              endDate: new Date('2026-10-09T22:00:00Z'),
+            },
+            {
+              userUuid,
+              name: 'Planificar midnight',
+              endDate: new Date('2026-10-09T22:00:00Z'),
+              endHasTime: true,
+            },
+            {
+              userUuid,
+              name: 'Planificar before now',
+              endDate: new Date('2026-10-10T11:59:00Z'),
+              endHasTime: true,
+            },
+            {
+              userUuid,
+              name: 'Planificar exactly now',
+              endDate: new Date('2026-10-10T12:00:00Z'),
+              endHasTime: true,
+            },
+            {
+              userUuid,
+              name: 'Planificar later',
+              endDate: new Date('2026-10-10T12:01:00Z'),
+              endHasTime: true,
+            },
+            {
+              userUuid,
+              name: 'Planificar completed',
+              status: TaskStatus.COMPLETED,
+              endDate: new Date('2026-10-08T22:00:00Z'),
+            },
+            {
+              userUuid,
+              name: 'Planificar cancelled',
+              status: TaskStatus.CANCELLED,
+              endDate: new Date('2026-10-08T22:00:00Z'),
+            },
+            { userUuid, name: 'Planificar without end' },
+            {
+              userUuid,
+              name: 'Other overdue',
+              endDate: new Date('2026-10-08T22:00:00Z'),
+            },
+          ],
+        });
+
+        const response = await fetch(
+          new URL('/tasks?view=overdue&search=planif&sortBy=end', baseUrl),
+          { headers: { cookie } },
+        );
+
+        expect(response.status).toBe(200);
+        expect(
+          ((await response.json()) as TaskResponse[]).map((task) => task.name),
+        ).toEqual([
+          'Planificar yesterday',
+          'Planificar midnight',
+          'Planificar before now',
+        ]);
+      });
+    });
+
+    it.each([
+      'status=UNKNOWN',
+      'status=pending',
+      'status=',
+      'status=PENDING&status=UNKNOWN',
+      'dateField=reminder',
+      'dateFrom=2026-02-30',
+      'dateTo=2026-10-10T12:00',
+      'dateFrom=2026-10-11&dateTo=2026-10-10',
+      'sortBy=name',
+      'sortDirection=down',
+      'view=unknown',
+      'view=today&status=PENDING',
+      'view=upcoming&dateFrom=2026-10-10',
+      'view=overdue&dateTo=2026-10-10',
+      'view=today&dateField=start',
+      'search=one&search=two',
+      'unexpected=true',
+    ])('rejects invalid or conflicting query %s', async (query) => {
+      const response = await fetch(new URL(`/tasks?${query}`, baseUrl), {
+        headers: { cookie },
+      });
+
+      expect(response.status).toBe(400);
     });
   });
 

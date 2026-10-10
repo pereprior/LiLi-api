@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { Authenticated } from '#src/auth/decorators/authenticated-session.decorator.js';
@@ -14,6 +15,7 @@ import type { AuthenticatedSession } from '#src/auth/types/authenticated-session
 import { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
 import type { DeleteResponse } from '#src/shared/responses/delete.response.js';
 import { CreateTaskDto } from '#src/tasks/dto/create-task.dto.js';
+import { FindTasksDto } from '#src/tasks/dto/find-tasks.dto.js';
 import { UpdateTaskDetailsDto } from '#src/tasks/dto/update-task-details.dto.js';
 import { UpdateTaskStatusDto } from '#src/tasks/dto/update-task-status.dto.js';
 import { TaskResponseMapper } from '#src/tasks/mappers/task-response.mapper.js';
@@ -53,8 +55,12 @@ export class TasksController {
   @Header('Cache-Control', 'no-store')
   async findAll(
     @Authenticated() session: AuthenticatedSession,
+    @Query() dto: FindTasksDto = {},
   ): Promise<TaskResponse[]> {
-    const tasks = await this.findAllTasks.execute({ uuid: session.user.uuid });
+    const tasks = await this.findAllTasks.execute(
+      { uuid: session.user.uuid },
+      dto,
+    );
     return TaskResponseMapper.toListResponse(tasks);
   }
 

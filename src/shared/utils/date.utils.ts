@@ -6,6 +6,16 @@ import {
 const MAX_TIME_ZONE_ADJUSTMENTS = 3;
 
 export class DateUtils {
+  static dayAfter(day: string, days: number): Date {
+    const date = new Date(`${day}T00:00:00Z`);
+
+    date.setUTCDate(date.getUTCDate() + days);
+
+    return this.parseLocalDateTime(
+      `${date.toISOString().slice(0, 10)}T00:00:00`,
+    );
+  }
+
   static parseLocalDateTime(localDateTime: string): Date {
     const localTimestamp = new Date(`${localDateTime}Z`).getTime();
 
