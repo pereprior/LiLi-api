@@ -44,6 +44,7 @@ export class UpdateTaskDetailsService {
 
           if (dto.name !== undefined) data.name = dto.name.trim();
           if (dto.description !== undefined) data.description = dto.description;
+          if (dto.priority !== undefined) data.priority = dto.priority;
           if (dto.start !== undefined)
             data.start = TaskDateMapper.fromString(dto.start);
           if (dto.end !== undefined)

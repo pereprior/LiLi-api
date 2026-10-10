@@ -6,6 +6,8 @@ import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('FindTaskByUuidService', () => {
   let module: TestingModule;
@@ -35,7 +37,8 @@ describe('FindTaskByUuidService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -49,13 +52,13 @@ describe('FindTaskByUuidService', () => {
     });
 
     it.each([
-      'PENDING',
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
-      'COMPLETED',
-      'CANCELLED',
+      TaskStatus.PENDING,
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
     ] as const)(
       'returns a visible %s task without imposing creation restrictions',
       async (status) => {
@@ -66,6 +69,7 @@ describe('FindTaskByUuidService', () => {
           'Groceries',
           null,
           status,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -89,7 +93,8 @@ describe('FindTaskByUuidService', () => {
         'parent-1',
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,

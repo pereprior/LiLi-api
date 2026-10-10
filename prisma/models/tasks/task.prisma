@@ -8,12 +8,19 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Task {
-  uuid        String     @id @default(uuid())
+  uuid        String       @id @default(uuid())
   userUuid    String
   name        String
   description String?
-  status      TaskStatus @default(PENDING)
+  status      TaskStatus   @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
 
   startDate       DateTime? @db.Timestamptz(3)
   startHasTime    Boolean   @default(false)

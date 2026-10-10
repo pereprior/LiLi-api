@@ -5,6 +5,7 @@ description: |
   visible del usuario. Cada campo omitido conserva su valor actual. Un objeto
   vacío se admite, pero también se comprueba que la tarea sea editable.
   `null` elimina la descripción o una fecha; el nombre no admite `null`.
+  La prioridad se puede cambiar a `LOW`, `MEDIUM` o `HIGH`; no admite `null`.
   El propietario, la principal y el estado no se modifican con esta operación.
 
   Se valida el intervalo resultante combinando los cambios con las fechas
@@ -27,6 +28,8 @@ properties:
     type: string
     nullable: true
     description: Nueva descripción, o `null` para eliminarla. La cadena vacía se admite.
+  priority:
+    $ref: ./task-priority.yaml
   start:
     $ref: ./task-date-input.yaml
   end:

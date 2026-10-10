@@ -13,6 +13,7 @@ required:
   - name
   - description
   - status
+  - priority
   - start
   - end
   - reminder
@@ -39,6 +40,8 @@ properties:
     description: Descripción de la tarea, o `null` si no se ha indicado.
   status:
     $ref: ./task-status.yaml
+  priority:
+    $ref: ./task-priority.yaml
   start:
     $ref: ./task-date.yaml
   end:
@@ -53,6 +56,7 @@ example:
   name: Comprar comida
   description: Revisar lo que queda en la despensa.
   status: PENDING
+  priority: MEDIUM
   start:
     date: '2026-10-15'
     time: null

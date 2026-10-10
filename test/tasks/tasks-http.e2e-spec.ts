@@ -11,6 +11,8 @@ import { configureApp } from '#src/config/app.config.js';
 import { configureOpenApi } from '#src/config/openapi.config.js';
 import { PrismaService } from '#src/database/prisma.service.js';
 import type { TaskResponse } from '#src/tasks/responses/task.response.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('Tasks HTTP', () => {
   let app: INestApplication;
@@ -189,7 +191,8 @@ describe('Tasks HTTP', () => {
         parentUuid: null,
         name: 'Groceries',
         description: 'For the week',
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: null },
         end: { date: '2026-10-16', time: '00:00' },
         reminder: { date: '2026-10-14', time: '09:00' },
@@ -198,6 +201,56 @@ describe('Tasks HTTP', () => {
         where: { uuid: task.uuid },
       });
       expect(stored.endDate?.toISOString()).toBe('2026-10-15T22:00:00.000Z');
+    });
+
+    it.each([
+      TaskPriority.LOW,
+      TaskPriority.MEDIUM,
+      TaskPriority.HIGH,
+    ] as const)(
+      'creates and retrieves a task with %s priority',
+      async (priority) => {
+        const response = await fetch(new URL('/tasks', baseUrl), {
+          method: 'POST',
+          headers: { cookie, origin, 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'Groceries', priority }),
+        });
+        const task = (await response.json()) as TaskResponse;
+
+        expect(response.status).toBe(201);
+        expect(task.priority).toBe(priority);
+        const stored = await prisma.task.findUniqueOrThrow({
+          where: { uuid: task.uuid },
+        });
+        expect(stored.priority).toBe(priority);
+
+        const found = await fetch(new URL(`/tasks/${task.uuid}`, baseUrl), {
+          headers: { cookie },
+        });
+
+        expect(found.status).toBe(200);
+        expect(await found.json()).toEqual(task);
+      },
+    );
+
+    it('defaults a subtask to medium independently of its principal priority', async () => {
+      const principal = await prisma.task.create({
+        data: { userUuid, name: 'Dinner', priority: TaskPriority.HIGH },
+      });
+
+      const response = await fetch(new URL('/tasks', baseUrl), {
+        method: 'POST',
+        headers: { cookie, origin, 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Groceries', parentUuid: principal.uuid }),
+      });
+      const task = (await response.json()) as TaskResponse;
+
+      expect(response.status).toBe(201);
+      expect(task.priority).toBe(TaskPriority.MEDIUM);
+      expect(
+        (await prisma.task.findUniqueOrThrow({ where: { uuid: task.uuid } }))
+          .priority,
+      ).toBe(TaskPriority.MEDIUM);
     });
 
     it('stores a reminder without start or end dates', async () => {
@@ -215,7 +268,8 @@ describe('Tasks HTTP', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: null,
         end: null,
         reminder: { date: '2026-10-15', time: null },
@@ -228,11 +282,15 @@ describe('Tasks HTTP', () => {
       ['blank name', { name: '  ' }],
       ['non-string name', { name: 123 }],
       ['non-string description', { name: 'Groceries', description: 1 }],
+      ['null priority', { name: 'Groceries', priority: null }],
+      ['unknown priority', { name: 'Groceries', priority: 'URGENT' }],
+      ['lowercase priority', { name: 'Groceries', priority: 'low' }],
+      ['non-string priority', { name: 'Groceries', priority: 1 }],
       [
         'chosen owner',
         { name: 'Groceries', userUuid: '91879373-16a2-47ea-9baa-40e15fef2ad1' },
       ],
-      ['chosen status', { name: 'Groceries', status: 'IN_PROGRESS' }],
+      ['chosen status', { name: 'Groceries', status: TaskStatus.IN_PROGRESS }],
       ['unknown property', { name: 'Groceries', extra: true }],
       ['invalid parent UUID', { name: 'Groceries', parentUuid: 'invalid' }],
       ['invalid calendar date', { name: 'Groceries', start: '2026-02-30' }],
@@ -290,7 +348,8 @@ describe('Tasks HTTP', () => {
         parentUuid: principal.uuid,
         name: 'Milk',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: null,
         end: null,
         reminder: null,
@@ -351,7 +410,7 @@ describe('Tasks HTTP', () => {
         data: {
           userUuid,
           name: 'Groceries',
-          status: 'IN_PROGRESS',
+          status: TaskStatus.IN_PROGRESS,
           createdAt: new Date('2026-10-01T00:00:00Z'),
         },
       });
@@ -360,7 +419,7 @@ describe('Tasks HTTP', () => {
           userUuid,
           parentUuid: principal.uuid,
           name: 'Milk',
-          status: 'COMPLETED',
+          status: TaskStatus.COMPLETED,
           createdAt: new Date('2026-10-02T00:00:00Z'),
         },
       });
@@ -384,7 +443,8 @@ describe('Tasks HTTP', () => {
           parentUuid: null,
           name: 'Groceries',
           description: null,
-          status: 'IN_PROGRESS',
+          status: TaskStatus.IN_PROGRESS,
+          priority: TaskPriority.MEDIUM,
           start: null,
           end: null,
           reminder: null,
@@ -395,7 +455,8 @@ describe('Tasks HTTP', () => {
           parentUuid: principal.uuid,
           name: 'Milk',
           description: null,
-          status: 'COMPLETED',
+          status: TaskStatus.COMPLETED,
+          priority: TaskPriority.MEDIUM,
           start: null,
           end: null,
           reminder: null,
@@ -414,7 +475,7 @@ describe('Tasks HTTP', () => {
 
     it('returns a task by UUID with its public fields', async () => {
       const task = await prisma.task.create({
-        data: { userUuid, name: 'Groceries', status: 'CANCELLED' },
+        data: { userUuid, name: 'Groceries', status: TaskStatus.CANCELLED },
       });
 
       const response = await fetch(new URL(`/tasks/${task.uuid}`, baseUrl), {
@@ -429,7 +490,8 @@ describe('Tasks HTTP', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'CANCELLED',
+        status: TaskStatus.CANCELLED,
+        priority: TaskPriority.MEDIUM,
         start: null,
         end: null,
         reminder: null,
@@ -457,7 +519,7 @@ describe('Tasks HTTP', () => {
         });
         const body =
           suffix === '/status'
-            ? { status: 'IN_PROGRESS' }
+            ? { status: TaskStatus.IN_PROGRESS }
             : { name: 'Changed' };
 
         const response = await fetch(
@@ -494,7 +556,9 @@ describe('Tasks HTTP', () => {
           ...(method === 'PATCH'
             ? {
                 body: JSON.stringify(
-                  suffix ? { status: 'IN_PROGRESS' } : { name: 'Changed' },
+                  suffix
+                    ? { status: TaskStatus.IN_PROGRESS }
+                    : { name: 'Changed' },
                 ),
               }
             : {}),
@@ -524,7 +588,9 @@ describe('Tasks HTTP', () => {
             ...(method === 'PATCH'
               ? {
                   body: JSON.stringify(
-                    suffix ? { status: 'IN_PROGRESS' } : { name: 'Changed' },
+                    suffix
+                      ? { status: TaskStatus.IN_PROGRESS }
+                      : { name: 'Changed' },
                   ),
                 }
               : {}),
@@ -540,6 +606,68 @@ describe('Tasks HTTP', () => {
   });
 
   describe('PATCH /tasks/:uuid', () => {
+    it.each([
+      TaskPriority.LOW,
+      TaskPriority.MEDIUM,
+      TaskPriority.HIGH,
+    ] as const)('persists a change to %s priority', async (priority) => {
+      const task = await prisma.task.create({
+        data: {
+          userUuid,
+          name: 'Groceries',
+          priority:
+            priority === TaskPriority.HIGH
+              ? TaskPriority.LOW
+              : TaskPriority.HIGH,
+        },
+      });
+
+      const response = await fetch(new URL(`/tasks/${task.uuid}`, baseUrl), {
+        method: 'PATCH',
+        headers: { cookie, origin, 'content-type': 'application/json' },
+        body: JSON.stringify({ priority }),
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        uuid: task.uuid,
+        userUuid,
+        parentUuid: null,
+        name: 'Groceries',
+        description: null,
+        status: TaskStatus.PENDING,
+        priority,
+        start: null,
+        end: null,
+        reminder: null,
+      });
+      expect(
+        (await prisma.task.findUniqueOrThrow({ where: { uuid: task.uuid } }))
+          .priority,
+      ).toBe(priority);
+    });
+
+    it('preserves an existing high priority when omitted from a patch', async () => {
+      const task = await prisma.task.create({
+        data: { userUuid, name: 'Groceries', priority: TaskPriority.HIGH },
+      });
+
+      const response = await fetch(new URL(`/tasks/${task.uuid}`, baseUrl), {
+        method: 'PATCH',
+        headers: { cookie, origin, 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Shopping' }),
+      });
+
+      expect(response.status).toBe(200);
+      expect(((await response.json()) as TaskResponse).priority).toBe(
+        TaskPriority.HIGH,
+      );
+      expect(
+        (await prisma.task.findUniqueOrThrow({ where: { uuid: task.uuid } }))
+          .priority,
+      ).toBe(TaskPriority.HIGH);
+    });
+
     it('accepts an empty patch without changing the public details', async () => {
       const task = await prisma.task.create({
         data: { userUuid, name: 'Groceries' },
@@ -558,7 +686,8 @@ describe('Tasks HTTP', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: null,
         end: null,
         reminder: null,
@@ -594,7 +723,8 @@ describe('Tasks HTTP', () => {
         parentUuid: null,
         name: 'Shopping',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: null },
         end: null,
         reminder: null,
@@ -605,9 +735,13 @@ describe('Tasks HTTP', () => {
       ['null name', { name: null }],
       ['blank name', { name: ' ' }],
       ['non-string description', { description: 1 }],
+      ['null priority', { priority: null }],
+      ['unknown priority', { priority: 'URGENT' }],
+      ['lowercase priority', { priority: 'low' }],
+      ['non-string priority', { priority: 1 }],
       ['invalid date', { start: '2026-02-30' }],
       ['changing parent', { parentUuid: null }],
-      ['changing status', { status: 'IN_PROGRESS' }],
+      ['changing status', { status: TaskStatus.IN_PROGRESS }],
     ])('rejects %s without modifying the task', async (_label, body) => {
       const task = await prisma.task.create({
         data: { userUuid, name: 'Groceries' },
@@ -630,7 +764,7 @@ describe('Tasks HTTP', () => {
         data: {
           userUuid,
           name: 'Groceries',
-          status: 'SCHEDULED',
+          status: TaskStatus.SCHEDULED,
           startDate: new Date('2026-10-14T22:00:00Z'),
         },
       });
@@ -651,7 +785,7 @@ describe('Tasks HTTP', () => {
       ).toEqual(task);
     });
 
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'rejects editing %s task details',
       async (status) => {
         const task = await prisma.task.create({
@@ -677,7 +811,7 @@ describe('Tasks HTTP', () => {
   });
 
   describe('PATCH /tasks/:uuid/status', () => {
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'accepts the current %s status without writing',
       async (status) => {
         const task = await prisma.task.create({
@@ -701,6 +835,7 @@ describe('Tasks HTTP', () => {
           name: 'Groceries',
           description: null,
           status,
+          priority: TaskPriority.MEDIUM,
           start: null,
           end: null,
           reminder: null,
@@ -725,12 +860,15 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'SCHEDULED' }),
+          body: JSON.stringify({ status: TaskStatus.SCHEDULED }),
         },
       );
 
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ ...task, status: 'SCHEDULED' });
+      expect(await response.json()).toEqual({
+        ...task,
+        status: TaskStatus.SCHEDULED,
+      });
     });
 
     it.each([
@@ -738,7 +876,7 @@ describe('Tasks HTTP', () => {
       { status: null },
       { status: 'pending' },
       { status: 'INVALID' },
-      { status: 'IN_PROGRESS', name: 'Changed' },
+      { status: TaskStatus.IN_PROGRESS, name: 'Changed' },
     ])('rejects invalid status input %j', async (body) => {
       const task = await prisma.task.create({
         data: { userUuid, name: 'Groceries' },
@@ -769,7 +907,7 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'SCHEDULED' }),
+          body: JSON.stringify({ status: TaskStatus.SCHEDULED }),
         },
       );
 
@@ -792,7 +930,7 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'IN_PROGRESS' }),
+          body: JSON.stringify({ status: TaskStatus.IN_PROGRESS }),
         },
       );
 
@@ -804,7 +942,7 @@ describe('Tasks HTTP', () => {
 
     it('cancels a principal and its subtasks together', async () => {
       const principal = await prisma.task.create({
-        data: { userUuid, name: 'Groceries', status: 'IN_PROGRESS' },
+        data: { userUuid, name: 'Groceries', status: TaskStatus.IN_PROGRESS },
       });
       const subtask = await prisma.task.create({
         data: { userUuid, name: 'Milk', parentUuid: principal.uuid },
@@ -815,23 +953,23 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'CANCELLED' }),
+          body: JSON.stringify({ status: TaskStatus.CANCELLED }),
         },
       );
 
       expect(response.status).toBe(200);
       expect(((await response.json()) as TaskResponse).status).toBe(
-        'CANCELLED',
+        TaskStatus.CANCELLED,
       );
       expect(
         (await prisma.task.findUniqueOrThrow({ where: { uuid: subtask.uuid } }))
           .status,
-      ).toBe('CANCELLED');
+      ).toBe(TaskStatus.CANCELLED);
     });
 
     it('rejects cancellation when a subtask is completed without partial changes', async () => {
       const principal = await prisma.task.create({
-        data: { userUuid, name: 'Groceries', status: 'IN_PROGRESS' },
+        data: { userUuid, name: 'Groceries', status: TaskStatus.IN_PROGRESS },
       });
       const pending = await prisma.task.create({
         data: { userUuid, name: 'Milk', parentUuid: principal.uuid },
@@ -841,7 +979,7 @@ describe('Tasks HTTP', () => {
           userUuid,
           name: 'Bread',
           parentUuid: principal.uuid,
-          status: 'COMPLETED',
+          status: TaskStatus.COMPLETED,
         },
       });
 
@@ -850,7 +988,7 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'CANCELLED' }),
+          body: JSON.stringify({ status: TaskStatus.CANCELLED }),
         },
       );
 
@@ -876,7 +1014,7 @@ describe('Tasks HTTP', () => {
 
     it('rejects completing a principal with unfinished subtasks', async () => {
       const principal = await prisma.task.create({
-        data: { userUuid, name: 'Groceries', status: 'IN_PROGRESS' },
+        data: { userUuid, name: 'Groceries', status: TaskStatus.IN_PROGRESS },
       });
       const subtask = await prisma.task.create({
         data: { userUuid, name: 'Milk', parentUuid: principal.uuid },
@@ -887,7 +1025,7 @@ describe('Tasks HTTP', () => {
         {
           method: 'PATCH',
           headers: { cookie, origin, 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'COMPLETED' }),
+          body: JSON.stringify({ status: TaskStatus.COMPLETED }),
         },
       );
 
@@ -902,7 +1040,7 @@ describe('Tasks HTTP', () => {
       ).toEqual(subtask);
     });
 
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'does not reopen a %s task',
       async (status) => {
         const task = await prisma.task.create({
@@ -914,7 +1052,7 @@ describe('Tasks HTTP', () => {
           {
             method: 'PATCH',
             headers: { cookie, origin, 'content-type': 'application/json' },
-            body: JSON.stringify({ status: 'IN_PROGRESS' }),
+            body: JSON.stringify({ status: TaskStatus.IN_PROGRESS }),
           },
         );
 
@@ -947,7 +1085,7 @@ describe('Tasks HTTP', () => {
 
     it('soft deletes a started principal and hides its subtasks from HTTP reads', async () => {
       const principal = await prisma.task.create({
-        data: { userUuid, name: 'Groceries', status: 'IN_PROGRESS' },
+        data: { userUuid, name: 'Groceries', status: TaskStatus.IN_PROGRESS },
       });
       const subtask = await prisma.task.create({
         data: { userUuid, name: 'Milk', parentUuid: principal.uuid },

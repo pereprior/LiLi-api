@@ -2,7 +2,8 @@ type: object
 additionalProperties: false
 description: |
   Cuerpo de `POST /tasks`. Crea una tarea en `PENDING` para el usuario de
-  la sesión. El propietario y el estado no forman parte del cuerpo.
+  la sesión. Si se omite la prioridad, se asigna `MEDIUM`. El propietario y
+  el estado no forman parte del cuerpo.
 
   `parentUuid` permite crear una subtarea de una principal visible del mismo
   usuario. Solo se admite un nivel: una subtarea no puede tener subtareas.
@@ -33,6 +34,8 @@ properties:
     nullable: true
     description: UUID de la principal del mismo usuario. Omitirlo o enviar `null` crea una tarea principal.
     example: 91879373-16a2-47ea-9baa-40e15fef2ad1
+  priority:
+    $ref: ./task-priority.yaml
   start:
     $ref: ./task-date-input.yaml
   end:

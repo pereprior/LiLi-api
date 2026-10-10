@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeleteResponse } from '#src/shared/responses/delete.response.js';
-import type { ChangeTaskStatusDto } from '#src/tasks/dto/change-task-status.dto.js';
+import type { UpdateTaskStatusDto } from '#src/tasks/dto/update-task-status.dto.js';
 import { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskDateEntity } from '#src/tasks/entities/task-date.entity.js';
 import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
@@ -13,6 +13,8 @@ import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/fin
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
 import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
 import { TasksController } from '#src/tasks/tasks.controller.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('TasksController', () => {
   let module: TestingModule;
@@ -71,7 +73,8 @@ describe('TasksController', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-15', '00:00'),
         null,
         null,
@@ -91,7 +94,8 @@ describe('TasksController', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: '00:00' },
         end: null,
         reminder: null,
@@ -124,7 +128,8 @@ describe('TasksController', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-15', '00:00'),
         null,
         null,
@@ -142,7 +147,8 @@ describe('TasksController', () => {
           parentUuid: null,
           name: 'Groceries',
           description: null,
-          status: 'PENDING',
+          status: TaskStatus.PENDING,
+          priority: TaskPriority.MEDIUM,
           start: { date: '2026-10-15', time: '00:00' },
           end: null,
           reminder: null,
@@ -176,7 +182,8 @@ describe('TasksController', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-15', '00:00'),
         null,
         null,
@@ -196,7 +203,8 @@ describe('TasksController', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: '00:00' },
         end: null,
         reminder: null,
@@ -231,7 +239,8 @@ describe('TasksController', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-15', '00:00'),
         null,
         null,
@@ -256,7 +265,8 @@ describe('TasksController', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: '00:00' },
         end: null,
         reminder: null,
@@ -284,14 +294,15 @@ describe('TasksController', () => {
         user: { uuid: 'user-1', email: 'member@example.com' },
         token: 'session-token',
       };
-      const dto: ChangeTaskStatusDto = { status: 'IN_PROGRESS' };
+      const dto: UpdateTaskStatusDto = { status: TaskStatus.IN_PROGRESS };
       const task = new TaskEntity(
         'task-1',
         'user-1',
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-15', '00:00'),
         null,
         null,
@@ -316,7 +327,8 @@ describe('TasksController', () => {
         parentUuid: null,
         name: 'Groceries',
         description: null,
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
+        priority: TaskPriority.MEDIUM,
         start: { date: '2026-10-15', time: '00:00' },
         end: null,
         reminder: null,
@@ -328,7 +340,7 @@ describe('TasksController', () => {
         user: { uuid: 'user-1', email: 'member@example.com' },
         token: 'session-token',
       };
-      const dto: ChangeTaskStatusDto = { status: 'IN_PROGRESS' };
+      const dto: UpdateTaskStatusDto = { status: TaskStatus.IN_PROGRESS };
       const error = new TaskConflictException('Task cannot be modified.');
       updateTaskStatus.mockRejectedValue(error);
 

@@ -15,6 +15,8 @@ import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/fin
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
 import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
 import { TasksModule } from '#src/tasks/tasks.module.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('Tasks', () => {
   let module: TestingModule;
@@ -88,7 +90,8 @@ describe('Tasks', () => {
           null,
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -98,7 +101,7 @@ describe('Tasks', () => {
       expect(stored).toMatchObject({
         userUuid: user.uuid,
         name: 'Groceries',
-        status: 'PENDING',
+        status: TaskStatus.PENDING,
       });
     });
 
@@ -222,7 +225,8 @@ describe('Tasks', () => {
           parent.uuid,
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -326,7 +330,7 @@ describe('Tasks', () => {
       ).toBe(0);
     });
 
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'rejects a %s principal',
       async (status) => {
         const user = await prisma.user.create({
@@ -556,13 +560,13 @@ describe('Tasks', () => {
 
   describe('Updating status', () => {
     it.each([
-      'PENDING',
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
-      'COMPLETED',
-      'CANCELLED',
+      TaskStatus.PENDING,
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
     ] as const)('persists %s without changing task details', async (status) => {
       const user = await prisma.user.create({
         data: {
@@ -755,7 +759,7 @@ describe('Tasks', () => {
         updateStatus.execute(
           { uuid: other.uuid },
           { uuid: task.uuid },
-          { status: 'COMPLETED' },
+          { status: TaskStatus.COMPLETED },
         ),
       ).rejects.toThrow(new TaskNotFoundException());
       expect(
@@ -782,7 +786,7 @@ describe('Tasks', () => {
         updateStatus.execute(
           { uuid: other.uuid },
           { uuid: task.uuid },
-          { status: 'COMPLETED' },
+          { status: TaskStatus.COMPLETED },
         ),
       ).rejects.toThrow(new TaskNotFoundException());
       expect(

@@ -10,6 +10,7 @@ export class TaskResponseMapper {
       task.name,
       task.description,
       task.status,
+      task.priority,
       task.start,
       task.end,
       task.reminder,

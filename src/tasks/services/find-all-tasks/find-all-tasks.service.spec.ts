@@ -6,6 +6,8 @@ import { TaskException } from '#src/tasks/exceptions/task.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { FindAllTasksService } from '#src/tasks/services/find-all-tasks/find-all-tasks.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('FindAllTasksService', () => {
   let module: TestingModule;
@@ -35,7 +37,8 @@ describe('FindAllTasksService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,

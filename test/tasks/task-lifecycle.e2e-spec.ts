@@ -14,6 +14,7 @@ import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/fin
 import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
 import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
 import { TasksModule } from '#src/tasks/tasks.module.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('Task lifecycle rules and persistence', () => {
   let module: TestingModule;
@@ -64,7 +65,7 @@ describe('Task lifecycle rules and persistence', () => {
   });
 
   describe('Terminal states', () => {
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'preserves details on a %s task',
       async (status) => {
         const user = await prisma.user.create({
@@ -103,7 +104,7 @@ describe('Task lifecycle rules and persistence', () => {
       },
     );
 
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'prevents reopening a %s task',
       async (status) => {
         const user = await prisma.user.create({
@@ -128,7 +129,7 @@ describe('Task lifecycle rules and persistence', () => {
         const result = updateStatus.execute(
           { uuid: user.uuid },
           { uuid: task.uuid },
-          { status: 'PENDING' },
+          { status: TaskStatus.PENDING },
         );
 
         await expect(result).rejects.toBeInstanceOf(TaskConflictException);
@@ -155,7 +156,7 @@ describe('Task lifecycle rules and persistence', () => {
       const result = updateStatus.execute(
         { uuid: user.uuid },
         { uuid: task.uuid },
-        { status: 'SCHEDULED' },
+        { status: TaskStatus.SCHEDULED },
       );
 
       await expect(result).rejects.toThrow(
@@ -180,7 +181,7 @@ describe('Task lifecycle rules and persistence', () => {
       const scheduled = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: task.uuid },
-        { status: 'SCHEDULED' },
+        { status: TaskStatus.SCHEDULED },
       );
 
       const result = updateDetails.execute(
@@ -216,7 +217,7 @@ describe('Task lifecycle rules and persistence', () => {
       const result = updateStatus.execute(
         { uuid: user.uuid },
         { uuid: child.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
 
       await expect(result).rejects.toBeInstanceOf(TaskConflictException);
@@ -243,18 +244,18 @@ describe('Task lifecycle rules and persistence', () => {
       const active = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: child.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
 
       const result = updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'PENDING' },
+        { status: TaskStatus.PENDING },
       );
 
       await expect(result).rejects.toBeInstanceOf(TaskConflictException);
@@ -281,13 +282,13 @@ describe('Task lifecycle rules and persistence', () => {
       const active = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
 
       const result = updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
 
       await expect(result).rejects.toBeInstanceOf(TaskConflictException);
@@ -318,26 +319,26 @@ describe('Task lifecycle rules and persistence', () => {
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: done.uuid },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: cancelled.uuid },
-        { status: 'CANCELLED' },
+        { status: TaskStatus.CANCELLED },
       );
 
       const completed = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
 
-      expect(completed.status).toBe('COMPLETED');
+      expect(completed.status).toBe(TaskStatus.COMPLETED);
     });
 
     it('cancels visible subtasks while preserving deleted history', async () => {
@@ -360,7 +361,7 @@ describe('Task lifecycle rules and persistence', () => {
           userUuid: user.uuid,
           parentUuid: principal.uuid,
           name: 'Old task',
-          status: 'COMPLETED',
+          status: TaskStatus.COMPLETED,
           deletedAt: new Date('2026-10-01T00:00:00Z'),
         },
       });
@@ -368,12 +369,12 @@ describe('Task lifecycle rules and persistence', () => {
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'CANCELLED' },
+        { status: TaskStatus.CANCELLED },
       );
 
       expect(
         (await find.execute({ uuid: user.uuid }, { uuid: child.uuid })).status,
-      ).toBe('CANCELLED');
+      ).toBe(TaskStatus.CANCELLED);
       expect(
         await prisma.task.findUniqueOrThrow({
           where: { uuid: historical.uuid },
@@ -403,18 +404,18 @@ describe('Task lifecycle rules and persistence', () => {
       const active = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
       const completed = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: child.uuid },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
 
       const result = updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'CANCELLED' },
+        { status: TaskStatus.CANCELLED },
       );
 
       await expect(result).rejects.toBeInstanceOf(TaskConflictException);
@@ -432,12 +433,12 @@ describe('Task lifecycle rules and persistence', () => {
 
   describe('Soft deletion', () => {
     it.each([
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
-      'COMPLETED',
-      'CANCELLED',
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
     ] as const)('keeps a deleted %s task as hidden history', async (status) => {
       const user = await prisma.user.create({
         data: {
@@ -489,19 +490,19 @@ describe('Task lifecycle rules and persistence', () => {
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: child.uuid },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
       const historical = await prisma.task.create({
         data: {
           userUuid: user.uuid,
           parentUuid: principal.uuid,
           name: 'Old task',
-          status: 'CANCELLED',
+          status: TaskStatus.CANCELLED,
           deletedAt: new Date('2026-10-01T00:00:00Z'),
         },
       });
@@ -516,7 +517,7 @@ describe('Task lifecycle rules and persistence', () => {
       });
       expect(deletedPrincipal.deletedAt).toBeInstanceOf(Date);
       expect(deletedChild).toMatchObject({
-        status: 'COMPLETED',
+        status: TaskStatus.COMPLETED,
         deletedAt: deletedPrincipal.deletedAt,
       });
       expect(
@@ -545,12 +546,12 @@ describe('Task lifecycle rules and persistence', () => {
       const active = await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: principal.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
       await updateStatus.execute(
         { uuid: user.uuid },
         { uuid: child.uuid },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
 
       await remove.execute({ uuid: user.uuid }, { uuid: child.uuid });
@@ -561,7 +562,7 @@ describe('Task lifecycle rules and persistence', () => {
       const storedChild = await prisma.task.findUniqueOrThrow({
         where: { uuid: child.uuid },
       });
-      expect(storedChild.status).toBe('IN_PROGRESS');
+      expect(storedChild.status).toBe(TaskStatus.IN_PROGRESS);
       expect(storedChild.deletedAt).toBeInstanceOf(Date);
     });
   });
@@ -638,7 +639,7 @@ describe('Task lifecycle rules and persistence', () => {
         await updateStatus.execute(
           { uuid: user.uuid },
           { uuid: principal.uuid },
-          { status: 'COMPLETED' },
+          { status: TaskStatus.COMPLETED },
         );
       } finally {
         continueCreation.resolve();

@@ -9,6 +9,8 @@ import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exce
 import { TaskValidationException } from '#src/tasks/exceptions/task-validation.exception.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
 import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
+import { TaskPriority } from '#src/tasks/types/enum/task-priority.enum.js';
+import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 
 describe('UpdateTaskStatusService', () => {
   let module: TestingModule;
@@ -53,7 +55,8 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -66,14 +69,14 @@ describe('UpdateTaskStatusService', () => {
         { uuid: 'user-1' },
         { uuid: 'task-1' },
         {
-          status: 'IN_PROGRESS',
+          status: TaskStatus.IN_PROGRESS,
         },
       );
 
       expect(result).toBe(task);
       expect(findTask).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1');
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
-        status: 'IN_PROGRESS',
+        status: TaskStatus.IN_PROGRESS,
       });
     });
 
@@ -84,7 +87,8 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -98,7 +102,7 @@ describe('UpdateTaskStatusService', () => {
         { uuid: 'user-1' },
         { uuid: 'task-1' },
         {
-          status: 'IN_PROGRESS',
+          status: TaskStatus.IN_PROGRESS,
         },
       );
 
@@ -118,7 +122,7 @@ describe('UpdateTaskStatusService', () => {
         service.execute(
           { uuid: 'user-1' },
           { uuid: 'task-1' },
-          { status: 'IN_PROGRESS' },
+          { status: TaskStatus.IN_PROGRESS },
         ),
       ).rejects.toBe(error);
       expect(update).not.toHaveBeenCalled();
@@ -131,7 +135,7 @@ describe('UpdateTaskStatusService', () => {
         service.execute(
           { uuid: 'user-1' },
           { uuid: 'task-1' },
-          { status: 'IN_PROGRESS' },
+          { status: TaskStatus.IN_PROGRESS },
         ),
       ).rejects.toThrow(new TaskException());
       expect(update).not.toHaveBeenCalled();
@@ -140,13 +144,13 @@ describe('UpdateTaskStatusService', () => {
 
   describe('Status values', () => {
     it.each([
-      'PENDING',
-      'SCHEDULED',
-      'IN_PROGRESS',
-      'PAUSED',
-      'BLOCKED',
-      'COMPLETED',
-      'CANCELLED',
+      TaskStatus.PENDING,
+      TaskStatus.SCHEDULED,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.PAUSED,
+      TaskStatus.BLOCKED,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
     ] as const)(
       'passes %s to persistence without changing other fields',
       async (status) => {
@@ -156,7 +160,10 @@ describe('UpdateTaskStatusService', () => {
           null,
           'Groceries',
           null,
-          status === 'IN_PROGRESS' ? 'PENDING' : 'IN_PROGRESS',
+          status === TaskStatus.IN_PROGRESS
+            ? TaskStatus.PENDING
+            : TaskStatus.IN_PROGRESS,
+          TaskPriority.MEDIUM,
           new TaskDateEntity('2026-10-10'),
           null,
           null,
@@ -185,7 +192,8 @@ describe('UpdateTaskStatusService', () => {
       null,
       'Groceries',
       null,
-      'PENDING',
+      TaskStatus.PENDING,
+      TaskPriority.MEDIUM,
       null,
       null,
       null,
@@ -199,7 +207,7 @@ describe('UpdateTaskStatusService', () => {
       service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       ),
     ).rejects.toBe(error);
   });
@@ -211,7 +219,8 @@ describe('UpdateTaskStatusService', () => {
       null,
       'Groceries',
       null,
-      'PENDING',
+      TaskStatus.PENDING,
+      TaskPriority.MEDIUM,
       null,
       null,
       null,
@@ -225,13 +234,13 @@ describe('UpdateTaskStatusService', () => {
       service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       ),
     ).rejects.toThrow(new TaskException());
   });
 
   describe('State and hierarchy rules', () => {
-    it.each(['COMPLETED', 'CANCELLED'] as const)(
+    it.each([TaskStatus.COMPLETED, TaskStatus.CANCELLED] as const)(
       'rejects moving a %s task to another state',
       async (status) => {
         findTask.mockResolvedValue(
@@ -242,6 +251,7 @@ describe('UpdateTaskStatusService', () => {
             'Dinner',
             null,
             status,
+            TaskPriority.MEDIUM,
             null,
             null,
             null,
@@ -252,7 +262,7 @@ describe('UpdateTaskStatusService', () => {
         const result = service.execute(
           { uuid: 'user-1' },
           { uuid: 'task-1' },
-          { status: 'IN_PROGRESS' },
+          { status: TaskStatus.IN_PROGRESS },
         );
 
         await expect(result).rejects.toThrow(
@@ -264,33 +274,35 @@ describe('UpdateTaskStatusService', () => {
       },
     );
 
-    it.each(['PENDING', 'COMPLETED', 'CANCELLED'] as const)(
-      'leaves an unchanged %s state untouched',
-      async (status) => {
-        const task = new TaskEntity(
-          'task-1',
-          'user-1',
-          null,
-          'Dinner',
-          null,
-          status,
-          null,
-          null,
-          null,
-          null,
-        );
-        findTask.mockResolvedValue(task);
+    it.each([
+      TaskStatus.PENDING,
+      TaskStatus.COMPLETED,
+      TaskStatus.CANCELLED,
+    ] as const)('leaves an unchanged %s state untouched', async (status) => {
+      const task = new TaskEntity(
+        'task-1',
+        'user-1',
+        null,
+        'Dinner',
+        null,
+        status,
+        TaskPriority.MEDIUM,
+        null,
+        null,
+        null,
+        null,
+      );
+      findTask.mockResolvedValue(task);
 
-        const result = await service.execute(
-          { uuid: 'user-1' },
-          { uuid: 'task-1' },
-          { status },
-        );
+      const result = await service.execute(
+        { uuid: 'user-1' },
+        { uuid: 'task-1' },
+        { status },
+      );
 
-        expect(result).toBe(task);
-        expect(update).not.toHaveBeenCalled();
-      },
-    );
+      expect(result).toBe(task);
+      expect(update).not.toHaveBeenCalled();
+    });
 
     it('requires a start before scheduling a task', async () => {
       findTask.mockResolvedValue(
@@ -300,7 +312,8 @@ describe('UpdateTaskStatusService', () => {
           null,
           'Dinner',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -311,7 +324,7 @@ describe('UpdateTaskStatusService', () => {
       const result = service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'SCHEDULED' },
+        { status: TaskStatus.SCHEDULED },
       );
 
       await expect(result).rejects.toThrow(
@@ -327,7 +340,8 @@ describe('UpdateTaskStatusService', () => {
         'parent-1',
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -339,7 +353,8 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Dinner',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -350,7 +365,7 @@ describe('UpdateTaskStatusService', () => {
       const result = service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'IN_PROGRESS' },
+        { status: TaskStatus.IN_PROGRESS },
       );
 
       await expect(result).rejects.toThrow(
@@ -368,7 +383,8 @@ describe('UpdateTaskStatusService', () => {
         'parent-1',
         'Groceries',
         null,
-        'PENDING',
+        TaskStatus.PENDING,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-10'),
         null,
         null,
@@ -380,27 +396,32 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Dinner',
         null,
-        'SCHEDULED',
+        TaskStatus.SCHEDULED,
+        TaskPriority.MEDIUM,
         new TaskDateEntity('2026-10-10'),
         null,
         null,
         null,
       );
       findTask.mockResolvedValueOnce(task).mockResolvedValueOnce(parent);
-      update.mockResolvedValue({ ...task, status: 'SCHEDULED' });
+      update.mockResolvedValue({ ...task, status: TaskStatus.SCHEDULED });
 
       await service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'SCHEDULED' },
+        { status: TaskStatus.SCHEDULED },
       );
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
-        status: 'SCHEDULED',
+        status: TaskStatus.SCHEDULED,
       });
     });
 
-    it.each(['PENDING', 'SCHEDULED', 'COMPLETED'] as const)(
+    it.each([
+      TaskStatus.PENDING,
+      TaskStatus.SCHEDULED,
+      TaskStatus.COMPLETED,
+    ] as const)(
       'rejects a principal transition to %s with an active subtask',
       async (status) => {
         const task = new TaskEntity(
@@ -409,7 +430,8 @@ describe('UpdateTaskStatusService', () => {
           null,
           'Dinner',
           null,
-          'IN_PROGRESS',
+          TaskStatus.IN_PROGRESS,
+          TaskPriority.MEDIUM,
           new TaskDateEntity('2026-10-10'),
           null,
           null,
@@ -423,7 +445,8 @@ describe('UpdateTaskStatusService', () => {
             'task-1',
             'Groceries',
             null,
-            'IN_PROGRESS',
+            TaskStatus.IN_PROGRESS,
+            TaskPriority.MEDIUM,
             null,
             null,
             null,
@@ -449,7 +472,8 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Dinner',
         null,
-        'IN_PROGRESS',
+        TaskStatus.IN_PROGRESS,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -463,7 +487,8 @@ describe('UpdateTaskStatusService', () => {
           'task-1',
           'Groceries',
           null,
-          'COMPLETED',
+          TaskStatus.COMPLETED,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -475,23 +500,24 @@ describe('UpdateTaskStatusService', () => {
           'task-1',
           'Dessert',
           null,
-          'CANCELLED',
+          TaskStatus.CANCELLED,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
           null,
         ),
       ]);
-      update.mockResolvedValue({ ...task, status: 'COMPLETED' });
+      update.mockResolvedValue({ ...task, status: TaskStatus.COMPLETED });
 
       await service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'COMPLETED' },
+        { status: TaskStatus.COMPLETED },
       );
 
       expect(update).toHaveBeenCalledExactlyOnceWith('user-1', 'task-1', {
-        status: 'COMPLETED',
+        status: TaskStatus.COMPLETED,
       });
     });
 
@@ -502,7 +528,8 @@ describe('UpdateTaskStatusService', () => {
         null,
         'Dinner',
         null,
-        'IN_PROGRESS',
+        TaskStatus.IN_PROGRESS,
+        TaskPriority.MEDIUM,
         null,
         null,
         null,
@@ -516,7 +543,8 @@ describe('UpdateTaskStatusService', () => {
           'task-1',
           'Groceries',
           null,
-          'PENDING',
+          TaskStatus.PENDING,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -528,27 +556,28 @@ describe('UpdateTaskStatusService', () => {
           'task-1',
           'Dessert',
           null,
-          'CANCELLED',
+          TaskStatus.CANCELLED,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
           null,
         ),
       ]);
-      update.mockResolvedValue({ ...task, status: 'CANCELLED' });
+      update.mockResolvedValue({ ...task, status: TaskStatus.CANCELLED });
 
       await service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'CANCELLED' },
+        { status: TaskStatus.CANCELLED },
       );
 
       expect(update).toHaveBeenCalledTimes(2);
       expect(update).toHaveBeenNthCalledWith(1, 'user-1', 'pending-1', {
-        status: 'CANCELLED',
+        status: TaskStatus.CANCELLED,
       });
       expect(update).toHaveBeenNthCalledWith(2, 'user-1', 'task-1', {
-        status: 'CANCELLED',
+        status: TaskStatus.CANCELLED,
       });
     });
 
@@ -560,7 +589,8 @@ describe('UpdateTaskStatusService', () => {
           null,
           'Dinner',
           null,
-          'IN_PROGRESS',
+          TaskStatus.IN_PROGRESS,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -574,7 +604,8 @@ describe('UpdateTaskStatusService', () => {
           'task-1',
           'Groceries',
           null,
-          'COMPLETED',
+          TaskStatus.COMPLETED,
+          TaskPriority.MEDIUM,
           null,
           null,
           null,
@@ -585,7 +616,7 @@ describe('UpdateTaskStatusService', () => {
       const result = service.execute(
         { uuid: 'user-1' },
         { uuid: 'task-1' },
-        { status: 'CANCELLED' },
+        { status: TaskStatus.CANCELLED },
       );
 
       await expect(result).rejects.toThrow(
@@ -605,7 +636,7 @@ describe('UpdateTaskStatusService', () => {
         service.execute(
           { uuid: 'user-1' },
           { uuid: 'task-1' },
-          { status: 'IN_PROGRESS' },
+          { status: TaskStatus.IN_PROGRESS },
         ),
       ).rejects.toThrow(new TaskNotFoundException());
 
