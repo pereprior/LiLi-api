@@ -1,5 +1,6 @@
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import type { CreateTaskData } from '#src/tasks/types/data/create-task.data.js';
+import type { FindTasksData } from '#src/tasks/types/data/find-tasks.data.js';
 import type { UpdateTaskData } from '#src/tasks/types/data/update-task.data.js';
 
 export abstract class TaskRepository {
@@ -9,7 +10,10 @@ export abstract class TaskRepository {
 
   abstract create(data: CreateTaskData): Promise<TaskEntity>;
 
-  abstract findAll(userUuid: string): Promise<TaskEntity[]>;
+  abstract findAll(
+    userUuid: string,
+    query: FindTasksData,
+  ): Promise<TaskEntity[]>;
 
   abstract findByUuid(
     userUuid: string,

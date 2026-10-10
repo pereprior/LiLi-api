@@ -3,13 +3,102 @@ get:
   operationId: findAllTasks
   summary: Listar las tareas del usuario
   description: |
-    Devuelve todas las tareas y subtareas visibles del usuario de la sesión,
-    incluidas las completadas y canceladas. La lista es plana, sin paginación,
-    ordenada por creación ascendente y por UUID en caso de empate. Si no hay
-    tareas visibles devuelve `[]`. Excluye las eliminadas lógicamente y las de
-    otros usuarios. No requiere `Origin` para esta consulta.
+    Devuelve las tareas y subtareas visibles del usuario de la sesión en una
+    lista plana, sin paginación. Excluye las eliminadas y las de otros usuarios.
+    Sin parámetros incluye completadas y canceladas y ordena por creación
+    ascendente, con UUID ascendente para desempatar. Sin coincidencias devuelve
+    `[]`. No requiere `Origin`.
+
+    Los filtros se combinan por intersección. `status` acepta uno o varios
+    estados repitiendo el parámetro. `search` busca una subcadena literal en el
+    nombre o la descripción, sin distinguir mayúsculas y minúsculas; recorta los
+    espacios exteriores e ignora una búsqueda vacía. No realiza búsqueda difusa
+    ni elimina acentos; `%`, `_` y la barra inversa son texto literal.
+
+    `dateFrom` y `dateTo` delimitan días inclusivos en Europe/Madrid sobre el
+    inicio por defecto o el fin si se indica `dateField=end`. Se admite un solo
+    límite. Las tareas sin la fecha elegida quedan excluidas; `dateField` solo
+    también selecciona las tareas que tienen esa fecha. El inicio del rango no
+    puede ser posterior al fin.
+
+    Las vistas rápidas excluyen completadas y canceladas. `today` selecciona
+    tareas que empiezan hoy. `upcoming` selecciona desde mañana hasta el séptimo
+    día posterior a hoy, ambos incluidos. `overdue` selecciona tareas cuyo fin
+    ya pasó: con hora se compara con el instante actual; sin hora vence al
+    terminar el día indicado. Una tarea sin fin no está vencida. Todas las
+    vistas usan el calendario de Madrid, incluidos sus cambios de horario, y
+    pueden combinarse con búsqueda y ordenación, pero no con `status`,
+    `dateField`, `dateFrom` o `dateTo`.
+
+    `sortBy` permite creación, prioridad, inicio o fin; `sortDirection` es
+    ascendente por defecto. Prioridad descendente significa HIGH, MEDIUM, LOW.
+    Al ordenar por inicio o fin, las fechas ausentes van al final en ambos
+    sentidos. Los empates de prioridad o fecha se resuelven por creación
+    ascendente y UUID ascendente.
+
+    Ejemplos: `/tasks?status=PENDING&status=SCHEDULED`,
+    `/tasks?dateField=end&dateFrom=2026-10-10&dateTo=2026-10-17`,
+    `/tasks?view=upcoming&search=planif&sortBy=priority&sortDirection=desc`.
   security:
     - sessionCookie: []
+  parameters:
+    - name: status
+      in: query
+      description: Uno o varios estados; repetir status para seleccionar varios.
+      style: form
+      explode: true
+      schema:
+        type: array
+        minItems: 1
+        items:
+          $ref: ../../components/schemas/tasks/task-status.yaml
+    - name: search
+      in: query
+      description: Subcadena literal del nombre o la descripción, sin distinguir mayúsculas.
+      schema:
+        type: string
+      example: planif
+    - name: dateField
+      in: query
+      description: Fecha sobre la que se aplica el rango; por sí sola excluye fechas ausentes.
+      schema:
+        type: string
+        enum: [start, end]
+        default: start
+    - name: dateFrom
+      in: query
+      description: Primer día incluido en el calendario de Madrid.
+      schema:
+        type: string
+        format: date
+      example: '2026-10-10'
+    - name: dateTo
+      in: query
+      description: Último día incluido en el calendario de Madrid.
+      schema:
+        type: string
+        format: date
+      example: '2026-10-17'
+    - name: sortBy
+      in: query
+      description: Campo de ordenación; las fechas ausentes van al final.
+      schema:
+        type: string
+        enum: [createdAt, priority, start, end]
+        default: createdAt
+    - name: sortDirection
+      in: query
+      description: Sentido del orden; desc coloca la prioridad alta primero.
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+    - name: view
+      in: query
+      description: Vista de tareas activas; incompatible con filtros manuales de estado o fecha.
+      schema:
+        type: string
+        enum: [overdue, today, upcoming]
   responses:
     '200':
       description: Lista de tareas visibles, sin campos internos de persistencia.
@@ -25,6 +114,12 @@ get:
             type: array
             items:
               $ref: ../../components/schemas/tasks/task.yaml
+    '400':
+      description: Parámetros inválidos o desconocidos, rango invertido, o vista combinada con filtros manuales de estado o fecha.
+      content:
+        application/json:
+          schema:
+            $ref: ../../components/schemas/http-error.yaml
     '401':
       description: Falta la cookie, la sesión ha caducado o se ha revocado, o el usuario ya no está autorizado.
       content:
