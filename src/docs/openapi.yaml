@@ -19,8 +19,20 @@ info:
 
     Las tareas admiten un nivel de subtareas, estados manuales, fechas locales
     en `Europe/Madrid` y eliminación física o lógica según su estado.
-    `reminder` almacena una fecha independiente del inicio y del fin. Todavía
-    no hay programación de avisos ni envío de correos.
+    `reminder` programa un aviso independiente del inicio y del fin cuando
+    `REMINDERS_ENABLED=true` y el envío por Gmail está configurado. El destinatario
+    es el correo de Google guardado para el propietario; la petición no permite
+    elegir otra dirección. Sin hora explícita, se envía a las 06:00 de Madrid.
+    El proceso revisa al arrancar y espera 30 segundos entre revisiones terminadas.
+    Recupera avisos retrasados hasta 24 horas; los anteriores caducan. Los fallos
+    temporales reintentan tras 1, 5, 15 y 60 minutos; los permanentes no reintentan.
+    Cambiar la fecha programa un nuevo aviso; repetir la misma no lo rearma.
+    Quitarla o completar, cancelar o borrar la tarea anula los envíos pendientes,
+    pero no puede retirar un correo cuyo envío ya está en curso.
+    Un reinicio tras la aceptación SMTP y antes de guardar el resultado puede
+    provocar un duplicado. Aceptación SMTP no garantiza recepción en la bandeja.
+    La respuesta HTTP confirma el guardado de la tarea, no el envío del aviso;
+    los estados de envío permanecen internos y no se exponen en estas rutas.
 
 tags:
   - name: Autenticación

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '#src/database/prisma.service.js';
+import { ReminderDateUtils } from '#src/reminders/utils/reminder-date.utils.js';
 import type { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskConflictException } from '#src/tasks/exceptions/task-conflict.exception.js';
 import { TaskNotFoundException } from '#src/tasks/exceptions/task-not-found.exception.js';
@@ -151,10 +152,46 @@ export class PrismaTaskRepository extends TaskRepository {
     uuid: string,
     data: UpdateTaskData,
   ): Promise<TaskEntity> {
+    if (this.transactionClient === null) {
+      return this.transaction((repository) =>
+        repository.update(userUuid, uuid, data),
+      );
+    }
+    const input = TaskMapper.toUpdateInput(data);
+    if (data.reminder !== undefined) {
+      const current = await this.client.task.findUniqueOrThrow({
+        where: { uuid, userUuid, deletedAt: null },
+        select: { reminderDate: true, reminderHasTime: true },
+      });
+      const reminderDate = input.reminderDate;
+      const hasChanged =
+        (reminderDate instanceof Date ? reminderDate.getTime() : null) !==
+          (current.reminderDate?.getTime() ?? null) ||
+        input.reminderHasTime !== current.reminderHasTime;
+      if (hasChanged) {
+        await this.client.taskReminder.deleteMany({
+          where: { taskUuid: uuid },
+        });
+        if (data.reminder !== null) {
+          const dueAt = ReminderDateUtils.dueAt(data.reminder);
+          input.notification = { create: { dueAt, nextAttemptAt: dueAt } };
+        }
+      }
+    }
     const record = await this.client.task.update({
       where: { uuid, userUuid, deletedAt: null },
-      data: TaskMapper.toUpdateInput(data),
+      data: input,
     });
+
+    if (
+      data.status === TaskStatus.COMPLETED ||
+      data.status === TaskStatus.CANCELLED
+    ) {
+      await this.client.taskReminder.updateMany({
+        where: { taskUuid: uuid, status: { in: ['PENDING', 'PROCESSING'] } },
+        data: { status: 'CANCELLED', claimToken: null, leaseUntil: null },
+      });
+    }
 
     return TaskMapper.toEntity(record);
   }
@@ -180,6 +217,13 @@ export class PrismaTaskRepository extends TaskRepository {
     await this.client.task.updateMany({
       where: { userUuid, parentUuid: uuid, deletedAt: null },
       data: { deletedAt },
+    });
+    await this.client.taskReminder.updateMany({
+      where: {
+        task: { userUuid, OR: [{ uuid }, { parentUuid: uuid }] },
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
+      data: { status: 'CANCELLED', claimToken: null, leaseUntil: null },
     });
   }
 }

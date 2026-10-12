@@ -23,6 +23,9 @@ You’ll need Node.js 24 or later, pnpm, Docker with Compose, and Google OAuth c
    AUTH_GOOGLE_CLIENT_ID=<client-id>
    AUTH_GOOGLE_CLIENT_SECRET=<client-secret>
    AUTH_GOOGLE_ALLOWED_EMAILS=your-email@example.com
+   REMINDERS_ENABLED=false
+   REMINDERS_GMAIL_USER=lili.reminder.noreply@gmail.com
+   REMINDERS_GMAIL_APP_PASSWORD=<gmail-app-password>
    POSTGRES_DB=lili
    POSTGRES_USER=lili
    POSTGRES_PASSWORD=<local-password>
@@ -31,6 +34,8 @@ You’ll need Node.js 24 or later, pnpm, Docker with Compose, and Google OAuth c
    ```
 
    Use the email address of the Google account you’ll sign in with. If you change `APP_ORIGIN`, register the new callback URI in Google, keeping the `/auth/google/callback` path. Do not commit `.env` to the repository.
+
+   The Gmail sender and app password are required, including when reminders are disabled. Neither has a default value. Set `REMINDERS_ENABLED=true` to enable sending from the dedicated Gmail account.
 
 3. Start PostgreSQL with `pnpm db:up`. Apply migrations with `pnpm db:migrate:deploy` and generate the Prisma client with `pnpm exec prisma generate`.
 4. Start the application with `pnpm dev` and open `http://localhost:3000/auth/google` to sign in.

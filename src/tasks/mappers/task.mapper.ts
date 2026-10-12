@@ -1,5 +1,6 @@
 import type { Prisma, Task } from '@prisma/client';
 
+import { ReminderDateUtils } from '#src/reminders/utils/reminder-date.utils.js';
 import { TaskEntity } from '#src/tasks/entities/task.entity.js';
 import { TaskDateMapper } from '#src/tasks/mappers/task-date.mapper.js';
 import type { CreateTaskData } from '#src/tasks/types/data/create-task.data.js';
@@ -55,6 +56,16 @@ export class TaskMapper {
       endHasTime: end.hasTime,
       reminderDate: reminder.date,
       reminderHasTime: reminder.hasTime,
+      ...(data.reminder == null
+        ? {}
+        : {
+            notification: {
+              create: {
+                dueAt: ReminderDateUtils.dueAt(data.reminder),
+                nextAttemptAt: ReminderDateUtils.dueAt(data.reminder),
+              },
+            },
+          }),
     };
   }
 

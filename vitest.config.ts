@@ -43,7 +43,12 @@ export default defineConfig({
         test: {
           name: 'e2e',
           setupFiles: ['./test/setup.ts'],
-          env: testEnvironment,
+          env: {
+            ...testEnvironment,
+            REMINDERS_ENABLED: 'false',
+            REMINDERS_GMAIL_USER: 'lili-test@gmail.com',
+            REMINDERS_GMAIL_APP_PASSWORD: 'test-app-password',
+          },
           fileParallelism: false,
           include: ['test/**/*.e2e-spec.ts'],
         },
