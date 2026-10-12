@@ -143,9 +143,12 @@ post:
     completadas o canceladas. La tarea nueva no cambia el estado de la principal.
 
     Interpreta las fechas en `Europe/Madrid` y conserva si se indicó una hora.
-    El recordatorio puede tener fecha propia aunque no haya inicio ni fin;
-    esta operación solo guarda los datos y todavía no programa ni envía avisos.
-    La validación de la principal y la creación comparten una transacción.
+    El recordatorio puede tener fecha propia aunque no haya inicio ni fin.
+    Si se indica, guarda un aviso pendiente junto con la tarea; el proceso de
+    recordatorios lo enviará cuando corresponda si `REMINDERS_ENABLED=true`.
+    Sin hora explícita se programa a las 06:00 de Madrid. La respuesta confirma
+    el guardado, no el envío. La validación de la principal, la tarea y su aviso
+    pendiente comparten una transacción.
   security:
     - sessionCookie: []
   parameters:

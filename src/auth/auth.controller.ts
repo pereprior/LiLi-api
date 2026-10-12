@@ -94,7 +94,7 @@ export class AuthController {
     );
 
     return {
-      url: new URL('/auth/me', this.config.appOrigin).toString(),
+      url: new URL('/', this.config.appOrigin).toString(),
       statusCode: 302,
     };
   }

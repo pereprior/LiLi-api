@@ -157,7 +157,7 @@ describe('Google login and local sessions', () => {
       expect(await prisma.session.count()).toBe(1);
     });
 
-    it('redirects a successful callback to the configured account URL', async () => {
+    it('redirects a successful callback to the frontend root at the configured origin', async () => {
       const start = await fetch(new URL('/auth/google', baseUrl), {
         redirect: 'manual',
       });
@@ -186,9 +186,7 @@ describe('Google login and local sessions', () => {
       });
 
       expect(callback.status).toBe(302);
-      expect(callback.headers.get('location')).toBe(
-        'http://localhost:3000/auth/me',
-      );
+      expect(callback.headers.get('location')).toBe('http://localhost:3000/');
     });
 
     it('prevents caching of a successful callback', async () => {
