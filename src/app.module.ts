@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { ActionsModule } from '#src/actions/actions.module.js';
 import { AuthModule } from '#src/auth/auth.module.js';
 import {
   authConfig,
@@ -9,7 +10,6 @@ import {
 import { getEnvironmentFilePath } from '#src/config/environment.config.js';
 import { DatabaseModule } from '#src/database/database.module.js';
 import { RemindersModule } from '#src/reminders/reminders.module.js';
-import { TasksModule } from '#src/tasks/tasks.module.js';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { TasksModule } from '#src/tasks/tasks.module.js';
     }),
     DatabaseModule,
     AuthModule,
-    TasksModule,
+    ActionsModule,
     RemindersModule,
   ],
 })

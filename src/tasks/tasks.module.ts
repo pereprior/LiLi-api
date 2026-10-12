@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
+import { ActionsModule } from '#src/actions/actions.module.js';
 import { DatabaseModule } from '#src/database/database.module.js';
 import { PrismaTaskRepository } from '#src/tasks/repositories/prisma-task.repository.js';
 import { TaskRepository } from '#src/tasks/repositories/task.repository.js';
@@ -12,7 +13,7 @@ import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/
 import { TasksController } from '#src/tasks/tasks.controller.js';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, forwardRef(() => ActionsModule)],
   controllers: [TasksController],
   providers: [
     CreateTaskService,
