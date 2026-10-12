@@ -3,12 +3,12 @@ import {
   IsArray,
   IsEnum,
   IsIn,
-  IsOptional,
   IsString,
 } from 'class-validator';
 
 import { StringToArray } from '#src/shared/transformer/string-to-array.transformer.js';
 import { IsDateOnly } from '#src/shared/validators/is-date-only.validator.js';
+import { IsOptionalUndefined } from '#src/shared/validators/is-optional-undefined.validator.js';
 import { TaskStatus } from '#src/tasks/types/enum/task-status.enum.js';
 import type {
   TaskDateField,
@@ -18,38 +18,38 @@ import type {
 } from '#src/tasks/types/find-task-options.type.js';
 
 export class FindTasksDto {
-  @IsOptional()
+  @IsOptionalUndefined()
   @StringToArray()
   @IsArray()
   @ArrayNotEmpty()
   @IsEnum(TaskStatus, { each: true })
   readonly status?: TaskStatus[];
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsString()
   readonly search?: string;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsIn(['start', 'end'])
   readonly dateField?: TaskDateField;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsDateOnly()
   readonly dateFrom?: string;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsDateOnly()
   readonly dateTo?: string;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsIn(['createdAt', 'priority', 'start', 'end'])
   readonly sortBy?: TaskSortField;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsIn(['asc', 'desc'])
   readonly sortDirection?: TaskSortDirection;
 
-  @IsOptional()
+  @IsOptionalUndefined()
   @IsIn(['overdue', 'today', 'upcoming'])
   readonly view?: TaskView;
 }

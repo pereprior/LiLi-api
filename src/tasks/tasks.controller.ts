@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 
+import { LiliService } from '#src/actions/services/lili/lili.service.js';
 import { Authenticated } from '#src/auth/decorators/authenticated-session.decorator.js';
 import type { AuthenticatedSession } from '#src/auth/types/authenticated-session.type.js';
 import { ParamUuidDto } from '#src/shared/dto/param-uuid.dto.js';
@@ -20,23 +21,10 @@ import { UpdateTaskDetailsDto } from '#src/tasks/dto/update-task-details.dto.js'
 import { UpdateTaskStatusDto } from '#src/tasks/dto/update-task-status.dto.js';
 import { TaskResponseMapper } from '#src/tasks/mappers/task-response.mapper.js';
 import type { TaskResponse } from '#src/tasks/responses/task.response.js';
-import { CreateTaskService } from '#src/tasks/services/create-task/create-task.service.js';
-import { DeleteTaskService } from '#src/tasks/services/delete-task/delete-task.service.js';
-import { FindAllTasksService } from '#src/tasks/services/find-all-tasks/find-all-tasks.service.js';
-import { FindTaskByUuidService } from '#src/tasks/services/find-task-by-uuid/find-task-by-uuid.service.js';
-import { UpdateTaskDetailsService } from '#src/tasks/services/update-task-details/update-task-details.service.js';
-import { UpdateTaskStatusService } from '#src/tasks/services/update-task-status/update-task-status.service.js';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(
-    private readonly createTask: CreateTaskService,
-    private readonly findAllTasks: FindAllTasksService,
-    private readonly findTaskByUuid: FindTaskByUuidService,
-    private readonly updateTaskDetails: UpdateTaskDetailsService,
-    private readonly updateTaskStatus: UpdateTaskStatusService,
-    private readonly deleteTask: DeleteTaskService,
-  ) {}
+  constructor(private readonly lili: LiliService) {}
 
   @Post()
   @Header('Cache-Control', 'no-store')
@@ -44,10 +32,11 @@ export class TasksController {
     @Authenticated() session: AuthenticatedSession,
     @Body() dto: CreateTaskDto,
   ): Promise<TaskResponse> {
-    const task = await this.createTask.execute(
-      { uuid: session.user.uuid },
-      dto,
-    );
+    const { result: task } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.create',
+      payload: dto,
+    });
     return TaskResponseMapper.toResponse(task);
   }
 
@@ -57,10 +46,11 @@ export class TasksController {
     @Authenticated() session: AuthenticatedSession,
     @Query() dto: FindTasksDto = {},
   ): Promise<TaskResponse[]> {
-    const tasks = await this.findAllTasks.execute(
-      { uuid: session.user.uuid },
-      dto,
-    );
+    const { result: tasks } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.findAll',
+      payload: dto,
+    });
     return TaskResponseMapper.toListResponse(tasks);
   }
 
@@ -70,10 +60,11 @@ export class TasksController {
     @Authenticated() session: AuthenticatedSession,
     @Param() uuidDto: ParamUuidDto,
   ): Promise<TaskResponse> {
-    const task = await this.findTaskByUuid.execute(
-      { uuid: session.user.uuid },
-      uuidDto,
-    );
+    const { result: task } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.findByUuid',
+      payload: uuidDto,
+    });
     return TaskResponseMapper.toResponse(task);
   }
 
@@ -84,11 +75,11 @@ export class TasksController {
     @Param() uuidDto: ParamUuidDto,
     @Body() dto: UpdateTaskDetailsDto,
   ): Promise<TaskResponse> {
-    const task = await this.updateTaskDetails.execute(
-      { uuid: session.user.uuid },
-      uuidDto,
-      dto,
-    );
+    const { result: task } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.updateDetails',
+      payload: { ...dto, uuid: uuidDto.uuid },
+    });
     return TaskResponseMapper.toResponse(task);
   }
 
@@ -99,11 +90,11 @@ export class TasksController {
     @Param() uuidDto: ParamUuidDto,
     @Body() dto: UpdateTaskStatusDto,
   ): Promise<TaskResponse> {
-    const task = await this.updateTaskStatus.execute(
-      { uuid: session.user.uuid },
-      uuidDto,
-      dto,
-    );
+    const { result: task } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.updateStatus',
+      payload: { ...dto, uuid: uuidDto.uuid },
+    });
     return TaskResponseMapper.toResponse(task);
   }
 
@@ -113,6 +104,11 @@ export class TasksController {
     @Authenticated() session: AuthenticatedSession,
     @Param() uuidDto: ParamUuidDto,
   ): Promise<DeleteResponse> {
-    return this.deleteTask.execute({ uuid: session.user.uuid }, uuidDto);
+    const { result } = await this.lili.execute({
+      actor: { uuid: session.user.uuid },
+      action: 'tasks.delete',
+      payload: uuidDto,
+    });
+    return result;
   }
 }
