@@ -47,7 +47,12 @@ properties:
   end:
     $ref: ./task-date.yaml
   reminder:
-    $ref: ./task-date.yaml
+    allOf:
+      - $ref: ./task-date.yaml
+    description: |
+      Fecha guardada del aviso. Sin hora se programa a las 06:00 de Madrid.
+      Su presencia no confirma envío ni recepción; el procesamiento depende
+      de la configuración de Gmail y el estado de envío no forma parte de esta respuesta.
 
 example:
   uuid: 91879373-16a2-47ea-9baa-40e15fef2ad1

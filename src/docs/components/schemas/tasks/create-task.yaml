@@ -41,7 +41,12 @@ properties:
   end:
     $ref: ./task-date-input.yaml
   reminder:
-    $ref: ./task-date-input.yaml
+    allOf:
+      - $ref: ./task-date-input.yaml
+    description: |
+      Fecha del aviso por correo al propietario si el envío está habilitado.
+      Sin hora se programa a las 06:00 de Europe/Madrid. Las fechas pasadas
+      se recuperan hasta 24 horas de retraso; después el aviso caduca.
 example:
   name: Comprar comida
   description: Revisar lo que queda en la despensa.

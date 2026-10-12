@@ -35,7 +35,13 @@ properties:
   end:
     $ref: ./task-date-input.yaml
   reminder:
-    $ref: ./task-date-input.yaml
+    allOf:
+      - $ref: ./task-date-input.yaml
+    description: |
+      Nueva fecha de aviso; sin hora se programa a las 06:00 de Europe/Madrid.
+      Cambiarla programa un nuevo aviso. Repetir la misma fecha conserva su
+      estado de envío. Omitirla no modifica el recordatorio y null lo elimina.
+      No puede retirar un envío que ya está en curso.
 example:
   name: Comprar comida para la semana
   reminder: null

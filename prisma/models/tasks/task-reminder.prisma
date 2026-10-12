@@ -1,0 +1,25 @@
+enum ReminderStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+model TaskReminder {
+  uuid          String         @id @default(uuid())
+  taskUuid      String         @unique
+  task          Task           @relation(fields: [taskUuid], references: [uuid], onDelete: Cascade)
+  dueAt         DateTime       @db.Timestamptz(3)
+  status        ReminderStatus @default(PENDING)
+  attempts      Int            @default(0)
+  nextAttemptAt DateTime       @db.Timestamptz(3)
+  leaseUntil    DateTime?      @db.Timestamptz(3)
+  claimToken    String?
+  sentAt        DateTime?      @db.Timestamptz(3)
+  messageId     String?
+  lastError     String?
+
+  @@index([status, nextAttemptAt])
+}
