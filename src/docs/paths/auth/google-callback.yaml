@@ -9,8 +9,9 @@ get:
     incluido en `AUTH_GOOGLE_ALLOWED_EMAILS`.
 
     Si el acceso es válido, crea o actualiza el usuario local, abre una sesión
-    de 7 días y redirige a `/auth/me`. La cookie temporal se borra antes de
-    procesar el callback, también cuando este acaba en error.
+    de 7 días y redirige a `/` en `APP_ORIGIN`, la entrada del frontend. Este
+    puede consultar `/auth/me` para recuperar el usuario de la sesión. La cookie
+    temporal se borra antes de procesar el callback, también cuando acaba en error.
   parameters:
     - in: query
       name: state
@@ -37,7 +38,7 @@ get:
       description: Cuenta permitida y sesión local creada.
       headers:
         Location:
-          description: URL de `/auth/me` en el origen configurado.
+          description: URL de `/` en el origen configurado en `APP_ORIGIN`.
           schema:
             type: string
             format: uri
